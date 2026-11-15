@@ -256,11 +256,18 @@ a.ext { color: var(--accent); font-size: 13px; text-underline-offset: 2px; }
 .receipt .terms { margin: 16px 0 0; color: var(--p-muted); font-size: 12px; display: grid; gap: 4px; }
 .receipt .signs { display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 28px; margin-top: 34px; }
 .receipt .signs div { border-top: 1px solid var(--p-ink); padding-top: 5px; font-size: 12px; color: var(--p-muted); }
+/* Utskrift: bare en kopi av kjøpsbeviset (#printArea) skrives ut; resten av siden tar ingen plass */
+#printArea { display: none; }
 @media print {
-  body * { visibility: hidden !important; }
-  #receipt, #receipt * { visibility: visible !important; }
-  #receipt { position: absolute; left: 0; top: 0; border: 0; box-shadow: none; max-width: none; padding: 0; }
-  .mobilebar { display: none !important; }
+  @page { size: A4; margin: 12mm; }
+  :root { padding: 0 !important; }
+  body { background: #fff !important; }
+  body > *:not(#printArea) { display: none !important; }
+  #printArea { display: block; }
+  #printArea .receipt { border: 0; box-shadow: none; border-radius: 0; max-width: none; width: 100%; padding: 0; }
+  #printArea .tbl { overflow: visible; }
+  #printArea table { min-width: 0; }
+  #printArea tr, #printArea .signs { break-inside: avoid; }
 }
 
 .mobilebar { display: none; }
@@ -1286,11 +1293,25 @@ $("toReceipt").addEventListener("click", () => $("receiptWrap").scrollIntoView({
 // Utskrift og nedlasting virker på egen nettside (GitHub Pages), ikke inne i Claude-visningen
 if (!IN_CLAUDE) {
   $("printBtn").hidden = false;
-  $("printBtn").addEventListener("click", () => window.print());
+  $("printBtn").addEventListener("click", printReceipt);
   $("pdfBtn").hidden = false;
   $("donePdf").hidden = false;
   $("pdfBtn").addEventListener("click", (e) => downloadReceipt(e.currentTarget));
   $("donePdf").addEventListener("click", (e) => downloadReceipt(e.currentTarget));
+}
+
+// Legger en kopi av kjøpsbeviset rett under <body>, skriver ut, og fjerner kopien etterpå
+function printReceipt() {
+  document.getElementById("printArea")?.remove();
+  const area = document.createElement("div");
+  area.id = "printArea";
+  const clone = $("receipt").cloneNode(true);
+  clone.removeAttribute("id");
+  area.appendChild(clone);
+  document.body.appendChild(area);
+  const cleanup = () => { area.remove(); window.removeEventListener("afterprint", cleanup); };
+  window.addEventListener("afterprint", cleanup);
+  window.print();
 }
 
 function loadScript(src) {
@@ -1306,20 +1327,25 @@ async function downloadReceipt(btn) {
   const label = btn.textContent;
   btn.disabled = true; btn.textContent = "Lager PDF …";
   let holder;
+  const scrollPos = window.scrollY;
   try {
     if (!window.html2pdf) await loadScript("https://cdnjs.cloudflare.com/ajax/libs/html2pdf.js/0.10.1/html2pdf.bundle.min.js");
+    // html2canvas tegner blankt hvis elementet ligger utenfor skjermen eller siden er rullet ned.
+    // Derfor legges kopien øverst på siden, bak alt annet, og siden rulles til toppen mens PDF-en lages.
     holder = document.createElement("div");
-    holder.style.cssText = "position:fixed;left:-10000px;top:0;width:794px;";
+    // 733 px = A4-bredde (210 mm) minus 8 mm marg på hver side, ved 96 dpi
+    holder.style.cssText = "position:absolute;left:0;top:0;width:733px;z-index:-1;background:#fff;";
     const clone = $("receipt").cloneNode(true);
     clone.removeAttribute("id");
-    clone.style.cssText = "width:794px;max-width:none;border:0;box-shadow:none;border-radius:0;";
+    clone.style.cssText = "width:733px;max-width:none;border:0;box-shadow:none;border-radius:0;padding:28px 30px;";
     holder.appendChild(clone);
     document.body.appendChild(holder);
+    window.scrollTo(0, 0);
     await window.html2pdf().set({
       margin: [8, 8, 8, 8],
       filename: "kjopsbevis-" + (CURRENT_DEAL ? CURRENT_DEAL.ref : "pokenordic") + ".pdf",
       image: { type: "jpeg", quality: 0.95 },
-      html2canvas: { scale: 2, backgroundColor: "#ffffff", useCORS: true },
+      html2canvas: { scale: 2, backgroundColor: "#ffffff", useCORS: true, scrollX: 0, scrollY: 0 },
       jsPDF: { unit: "mm", format: "a4", orientation: "portrait" },
       pagebreak: { mode: ["css", "legacy"] }
     }).from(clone).save();
@@ -1331,6 +1357,7 @@ async function downloadReceipt(btn) {
   } finally {
     btn.disabled = false;
     if (holder) holder.remove();
+    window.scrollTo(0, scrollPos);
   }
 }
 function alertBox(msg) {
