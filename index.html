@@ -354,13 +354,13 @@ a.ext { color: var(--accent); font-size: 13px; text-underline-offset: 2px; }
       <button type="button" class="mode" role="radio" id="modeCash" data-mode="cash" aria-checked="true">
         <span class="dot" aria-hidden="true"></span>
         <span class="k">Utbetaling</span>
-        <span class="v" id="cashPct">75 %</span>
+        <span class="v" id="cashPct">78 %</span>
         <span class="d">av markedspris, utbetalt til deg</span>
       </button>
       <button type="button" class="mode" role="radio" id="modeTrade" data-mode="trade" aria-checked="false">
         <span class="dot" aria-hidden="true"></span>
         <span class="k">Innbytte</span>
-        <span class="v" id="tradePct">80 %</span>
+        <span class="v" id="tradePct">83 %</span>
         <span class="d" id="tradeDesc">av markedspris som tilgode i nettbutikken</span>
         <span class="bonus" id="tradeBonus">+5 % ekstra</span>
       </button>
@@ -579,8 +579,8 @@ a.ext { color: var(--accent); font-size: 13px; text-underline-offset: 2px; }
 <script>
 /* ============ INNSTILLINGER (endre her) ============ */
 const CONFIG = {
-  cashRate: 0.75,                   // utbetaling: andel av TCGPlayer markedspris (Near Mint)
-  tradeRate: 0.80,                 // innbytte: andel av markedspris som tilgode i nettbutikken
+  cashRate: 0.78,                   // utbetaling: andel av TCGPlayer markedspris (Near Mint)
+  tradeRate: 0.83,                // innbytte: andel av markedspris som tilgode i nettbutikken
   shopUrl: null,                    // lenke til nettbutikken, f.eks. "https://pokenordic.no"
   conditions: [                     // trekk for tilstand, ganges med satsen over
     { code: "NM",  name: "Near Mint",         factor: 1.00, desc: "Som nytt. Skarpe hjørner, ingen riper. Høyst et par bittesmå hvite prikker på baksidekanten." },

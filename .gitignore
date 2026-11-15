@@ -5,3 +5,6 @@ _site/
 card_img_cache/
 __pycache__/
 .claude/
+
+# Kode til Shopify-temaet (limes inn i Shopify, skal ikke ligge i det offentlige repoet)
+shopify/

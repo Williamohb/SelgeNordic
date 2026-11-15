@@ -1,7 +1,7 @@
 # Innkjøpsportal for Pokémon-kort
 
 Selgere søker opp kort, velger variant og tilstand og får en estimert utbetaling:
-**TCGPlayer Market Price × 75 % (utbetaling) eller 80 % (innbytte) × tilstandstrekk × USD/NOK-kurs**.
+**TCGPlayer Market Price × 78 % (utbetaling) eller 83 % (innbytte) × tilstandstrekk × USD/NOK-kurs**.
 Til slutt lager de en tilbudstekst som de sender deg.
 
 ## Filer
