@@ -1,0 +1,7 @@
+# Genereres av byggeskriptene (lokalt og i GitHub Actions)
+cards.json
+img/
+_site/
+card_img_cache/
+__pycache__/
+.claude/

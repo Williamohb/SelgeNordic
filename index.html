@@ -1,0 +1,1014 @@
+<title>PokéNordic Innkjøp</title>
+<meta name="claude:viewport-fit-sides" content="cover">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,600;12..96,800&family=Inter:wght@400;500;600&family=JetBrains+Mono:wght@500;700&display=swap">
+<style>
+/* Layout: logolinje, så valg av utbetaling/innbytte; søk og kortvalg til venstre, tilbudslappen fast til høyre; stables på mobil.
+   Farger: PokéNordic-blå (logoens #1E6FDA) som aksent, isblå «snø» som markering. */
+:root {
+  --bg: #F2F6FC;
+  --surface: #FFFFFF;
+  --sunk: #E6EDF7;
+  --ink: #0F1A2E;
+  --muted: #56637A;
+  --line: #D6DFEC;
+  --accent: #1E6FDA;
+  --accent-ink: #FFFFFF;
+  --mark: #D5E8FF;
+  --mark-ink: #0B2E66;
+  --good: #1F8A55;
+  --warn: #B4561B;
+  --logo-filter: none;
+  --font-display: "Bricolage Grotesque", "Inter", system-ui, sans-serif;
+  --font-body: "Inter", system-ui, -apple-system, "Segoe UI", sans-serif;
+  --font-mono: "JetBrains Mono", ui-monospace, "Cascadia Mono", Consolas, monospace;
+  --radius: 10px;
+}
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) {
+    --bg: #0C1220; --surface: #141C2F; --sunk: #1B253B; --ink: #E6ECF7; --muted: #97A3BA;
+    --line: #283552; --accent: #5C9BF0; --accent-ink: #0C1220; --mark: #1E6FDA; --mark-ink: #FFFFFF;
+    --good: #4CC38A; --warn: #F0965A; --logo-filter: brightness(1.35) saturate(1.1); color-scheme: dark;
+  }
+}
+:root[data-theme="dark"] {
+  --bg: #0C1220; --surface: #141C2F; --sunk: #1B253B; --ink: #E6ECF7; --muted: #97A3BA;
+  --line: #283552; --accent: #5C9BF0; --accent-ink: #0C1220; --mark: #1E6FDA; --mark-ink: #FFFFFF;
+  --good: #4CC38A; --warn: #F0965A; --logo-filter: brightness(1.35) saturate(1.1); color-scheme: dark;
+}
+* { box-sizing: border-box; }
+body {
+  background: var(--bg); color: var(--ink); font-family: var(--font-body); font-size: 15px; line-height: 1.5;
+}
+.wrap {
+  max-width: 1180px; margin: 0 auto;
+  padding-left: max(16px, env(safe-area-inset-left, 0px));
+  padding-right: max(16px, env(safe-area-inset-right, 0px));
+  padding-block: 20px 96px;
+}
+.brandbar { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 12px 24px; padding-bottom: 18px; border-bottom: 1px solid var(--line); }
+.logo { display: block; height: 54px; width: auto; filter: var(--logo-filter); }
+.brandbar .tag { font-size: 12px; font-weight: 600; letter-spacing: .08em; text-transform: uppercase; color: var(--muted); }
+header.top { display: grid; grid-template-columns: minmax(0, 1.1fr) minmax(0, 1fr); gap: 20px 32px; align-items: end; margin: 26px 0 26px; }
+@media (max-width: 900px) { header.top { grid-template-columns: minmax(0, 1fr); } }
+h1 { font-family: var(--font-display); font-weight: 800; font-size: clamp(28px, 4.2vw, 42px); line-height: 1.06; margin: 0; letter-spacing: -0.02em; text-wrap: balance; }
+.lede { color: var(--muted); margin: 10px 0 0; max-width: 56ch; }
+.meta { font-family: var(--font-mono); font-size: 12px; color: var(--muted); display: grid; gap: 2px; margin-top: 14px; }
+
+/* Utbetaling eller innbytte */
+.modes { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 10px; }
+.mode {
+  font: inherit; color: var(--ink); text-align: left; cursor: pointer; position: relative;
+  background: var(--surface); border: 2px solid var(--line); border-radius: 12px; padding: 14px 16px 15px; display: grid; gap: 2px;
+}
+.mode:hover { border-color: color-mix(in srgb, var(--accent) 45%, var(--line)); }
+.mode:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+.mode[aria-checked="true"] { border-color: var(--accent); background: color-mix(in srgb, var(--accent) 8%, var(--surface)); }
+@media (max-width: 380px) { .modes { grid-template-columns: minmax(0, 1fr); } }
+.mode .k { padding-right: 26px; font-size: 12px; font-weight: 600; letter-spacing: .08em; text-transform: uppercase; color: var(--muted); }
+.mode .v { font-family: var(--font-display); font-weight: 800; font-size: 34px; line-height: 1.05; letter-spacing: -0.02em; }
+.mode .d { font-size: 13px; color: var(--muted); }
+.mode .dot { position: absolute; top: 14px; right: 14px; width: 18px; height: 18px; border-radius: 50%; border: 2px solid var(--line); }
+.mode[aria-checked="true"] .dot { border-color: var(--accent); background: radial-gradient(circle, var(--accent) 0 45%, transparent 50%); }
+.mode .bonus { justify-self: start; margin-top: 6px; font-size: 11.5px; font-weight: 600; background: var(--mark); color: var(--mark-ink); padding: 1px 8px; border-radius: 999px; }
+.mode .d a { color: var(--accent); }
+.grid { display: grid; grid-template-columns: minmax(0, 1fr) 380px; gap: 24px; align-items: start; }
+@media (max-width: 900px) { .grid { grid-template-columns: minmax(0, 1fr); } }
+
+/* Søk */
+.searchbox { position: relative; }
+.searchbox input {
+  width: 100%; font: inherit; font-size: 17px; padding: 14px 16px 14px 46px; border-radius: var(--radius);
+  border: 1.5px solid var(--line); background: var(--surface); color: var(--ink);
+}
+.searchbox input:focus { outline: none; border-color: var(--accent); box-shadow: 0 0 0 3px color-mix(in srgb, var(--accent) 22%, transparent); }
+.searchbox svg { position: absolute; left: 15px; top: 50%; transform: translateY(-50%); color: var(--muted); }
+.hint { font-size: 13px; color: var(--muted); margin: 8px 2px 0; }
+.hint code { font-family: var(--font-mono); font-size: 12px; background: var(--sunk); padding: 1px 5px; border-radius: 4px; }
+.listhead { display: flex; justify-content: space-between; align-items: baseline; gap: 12px; margin: 22px 2px 8px; }
+.listhead h2 { font-family: var(--font-display); font-weight: 600; font-size: 17px; margin: 0; }
+.listhead span { font-size: 13px; color: var(--muted); }
+
+.results { display: grid; gap: 6px; }
+.row { background: var(--surface); border: 1px solid var(--line); border-radius: var(--radius); }
+.row > button.head {
+  all: unset; box-sizing: border-box; width: 100%; cursor: pointer; display: grid;
+  grid-template-columns: auto minmax(0, 1fr) auto; gap: 2px 14px; padding: 10px 14px 10px 10px; align-items: center; border-radius: var(--radius);
+}
+.thumb {
+  grid-row: 1 / span 2; grid-column: 1; width: 50px; aspect-ratio: 72 / 100; border-radius: 3px; background-color: var(--sunk);
+  background-repeat: no-repeat; box-shadow: 0 0 0 1px var(--line);
+}
+.item .thumb { width: 34px; grid-row: 1 / span 2; }
+.row > button.head:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+.row > button.head:hover { background: var(--sunk); }
+.row.open > button.head { border-bottom: 1px solid var(--line); border-radius: var(--radius) var(--radius) 0 0; }
+.cname { grid-column: 2; align-self: end; font-weight: 600; min-width: 0; overflow-wrap: anywhere; }
+.csub { grid-column: 2; align-self: start; font-size: 13px; color: var(--muted); min-width: 0; overflow-wrap: anywhere; }
+.csub .num { font-family: var(--font-mono); font-size: 12px; color: var(--ink); }
+.cprice { grid-row: 1 / span 2; grid-column: 3; text-align: right; font-family: var(--font-mono); font-variant-numeric: tabular-nums; }
+.cprice b { display: block; font-size: 15px; }
+.cprice small { color: var(--muted); font-size: 11px; font-family: var(--font-body); }
+.empty { padding: 28px 18px; text-align: center; color: var(--muted); background: var(--surface); border: 1px dashed var(--line); border-radius: var(--radius); }
+
+/* Kortdetalj */
+.detail { padding: 16px 14px 18px; display: grid; gap: 16px; }
+.field-label { font-size: 12px; font-weight: 600; letter-spacing: .06em; text-transform: uppercase; color: var(--muted); margin-bottom: 7px; }
+.chips { display: flex; flex-wrap: wrap; gap: 6px; }
+.chip {
+  font: inherit; font-size: 14px; cursor: pointer; padding: 7px 11px; border-radius: 999px; border: 1.5px solid var(--line);
+  background: var(--surface); color: var(--ink); display: inline-flex; gap: 8px; align-items: baseline;
+}
+.chip small { font-family: var(--font-mono); font-size: 11.5px; color: var(--muted); }
+.chip[aria-pressed="true"] { border-color: var(--accent); background: color-mix(in srgb, var(--accent) 12%, var(--surface)); }
+.chip:disabled { opacity: .45; cursor: not-allowed; }
+.chip:focus-visible, .btn:focus-visible, .qty button:focus-visible, .linkbtn:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+.conds { display: grid; grid-template-columns: repeat(5, minmax(0, 1fr)); gap: 6px; }
+@media (max-width: 560px) { .conds { grid-template-columns: repeat(3, minmax(0, 1fr)); } }
+.cond {
+  font: inherit; cursor: pointer; text-align: left; padding: 9px 10px; border-radius: 8px; border: 1.5px solid var(--line);
+  background: var(--surface); color: var(--ink); display: grid; gap: 1px;
+}
+.cond b { font-family: var(--font-mono); font-size: 14px; }
+.cond span { font-size: 12px; color: var(--muted); }
+.cond[aria-pressed="true"] { border-color: var(--accent); background: color-mix(in srgb, var(--accent) 12%, var(--surface)); }
+.cond:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+.cond-desc { font-size: 13.5px; color: var(--muted); margin: 8px 2px 0; max-width: 65ch; }
+.calc { display: flex; flex-wrap: wrap; align-items: flex-end; justify-content: space-between; gap: 14px; background: var(--sunk); border-radius: 8px; padding: 12px 14px; }
+.calc .steps { font-family: var(--font-mono); font-size: 12.5px; color: var(--muted); display: grid; gap: 2px; font-variant-numeric: tabular-nums; }
+.calc .out { text-align: right; }
+.calc .out small { display: block; font-size: 12px; color: var(--muted); }
+.calc .out b { font-family: var(--font-mono); font-size: 22px; background: var(--mark); color: var(--mark-ink); padding: 0 6px; border-radius: 4px; font-variant-numeric: tabular-nums; }
+.actions { display: flex; flex-wrap: wrap; gap: 10px; align-items: center; justify-content: space-between; }
+.qty { display: inline-flex; align-items: center; border: 1.5px solid var(--line); border-radius: 8px; overflow: hidden; background: var(--surface); }
+.qty button { font: inherit; width: 36px; height: 38px; border: 0; background: transparent; color: var(--ink); cursor: pointer; font-size: 18px; }
+.qty button:hover { background: var(--sunk); }
+.qty input { width: 46px; text-align: center; border: 0; font: inherit; font-family: var(--font-mono); background: transparent; color: var(--ink); -moz-appearance: textfield; }
+.qty input::-webkit-inner-spin-button { -webkit-appearance: none; }
+.btn { font: inherit; font-weight: 600; cursor: pointer; border-radius: 8px; padding: 10px 16px; border: 1.5px solid var(--accent); background: var(--accent); color: var(--accent-ink); }
+.btn:hover { filter: brightness(1.08); }
+.btn.ghost { background: transparent; color: var(--accent); }
+.btn:disabled { opacity: .5; cursor: not-allowed; filter: none; }
+.linkbtn { all: unset; cursor: pointer; color: var(--accent); font-size: 13px; text-decoration: underline; text-underline-offset: 2px; }
+a.ext { color: var(--accent); font-size: 13px; text-underline-offset: 2px; }
+
+/* Tilbudslapp */
+.slip {
+  position: sticky; top: calc(env(safe-area-inset-top, 0px) + 16px);
+  background: var(--surface); border: 1px solid var(--line); border-radius: var(--radius);
+  box-shadow: 0 1px 0 var(--line), 0 12px 30px -18px color-mix(in srgb, var(--ink) 35%, transparent);
+}
+@media (max-width: 900px) { .slip { position: static; } }
+.slip-head { padding: 16px 18px 12px; border-bottom: 2px dashed var(--line); display: flex; justify-content: space-between; align-items: baseline; gap: 10px; }
+.slip-head h2 { font-family: var(--font-display); font-weight: 800; font-size: 20px; margin: 0; }
+.slip-head span { font-family: var(--font-mono); font-size: 12px; color: var(--muted); }
+.items { list-style: none; margin: 0; padding: 4px 18px; max-height: 46vh; overflow-y: auto; }
+@media (max-width: 900px) { .items { max-height: none; } }
+.item { display: grid; grid-template-columns: auto minmax(0, 1fr) auto; gap: 2px 12px; padding: 11px 0; border-bottom: 1px solid var(--line); }
+.item:last-child { border-bottom: 0; }
+.item .n { grid-column: 2; font-weight: 600; font-size: 14px; min-width: 0; overflow-wrap: anywhere; }
+.item .s { grid-column: 2; font-size: 12.5px; color: var(--muted); min-width: 0; overflow-wrap: anywhere; }
+.item .s .tag { font-family: var(--font-mono); font-size: 11.5px; color: var(--ink); background: var(--sunk); padding: 0 5px; border-radius: 4px; }
+.item .p { grid-column: 3; grid-row: 1; text-align: right; font-family: var(--font-mono); font-size: 14px; font-variant-numeric: tabular-nums; }
+.item .ctl { grid-column: 2 / -1; display: flex; gap: 12px; align-items: center; margin-top: 4px; }
+.item .qty button { width: 28px; height: 28px; font-size: 15px; }
+.item .qty input { width: 34px; font-size: 13px; }
+.item .each { font-family: var(--font-mono); font-size: 12px; color: var(--muted); margin-left: auto; }
+.slip-empty { padding: 22px 18px; color: var(--muted); font-size: 14px; }
+.slip-empty b { color: var(--ink); }
+.total { padding: 14px 18px; border-top: 2px dashed var(--line); display: flex; justify-content: space-between; align-items: baseline; gap: 10px; }
+.total span { font-size: 13px; color: var(--muted); }
+.total b { font-family: var(--font-mono); font-size: 24px; font-variant-numeric: tabular-nums; }
+.alt { margin: -6px 18px 14px; font-size: 13px; color: var(--muted); display: flex; flex-wrap: wrap; gap: 4px 8px; align-items: baseline; }
+.alt b { font-family: var(--font-mono); color: var(--ink); font-weight: 500; }
+.send { padding: 0 18px 18px; display: grid; gap: 10px; }
+.send label { font-size: 13px; font-weight: 600; display: grid; gap: 4px; }
+.send input, .send textarea {
+  font: inherit; font-weight: 400; padding: 9px 11px; border-radius: 8px; border: 1.5px solid var(--line); background: var(--surface); color: var(--ink); width: 100%;
+}
+.send input:focus, .send textarea:focus { outline: none; border-color: var(--accent); }
+.send textarea { resize: vertical; min-height: 54px; }
+.fineprint { font-size: 12px; color: var(--muted); margin: 0; }
+.out-box { display: grid; gap: 8px; }
+.out-box pre {
+  margin: 0; max-height: 260px; overflow: auto; white-space: pre-wrap; font-family: var(--font-mono); font-size: 12px;
+  background: var(--sunk); border-radius: 8px; padding: 10px 12px; user-select: all; overflow-wrap: anywhere;
+}
+.sendto { font-size: 13.5px; background: color-mix(in srgb, var(--good) 12%, var(--surface)); border: 1px solid color-mix(in srgb, var(--good) 40%, var(--line)); border-radius: 8px; padding: 9px 11px; }
+.sendto b { user-select: all; }
+.sendto.bad { background: color-mix(in srgb, var(--warn) 12%, var(--surface)); border-color: color-mix(in srgb, var(--warn) 45%, var(--line)); }
+.slip.locked .item .ctl { display: none; }
+.done { padding: 22px 18px 20px; border-top: 2px dashed var(--line); display: grid; gap: 10px; }
+.done-mark { width: 46px; height: 46px; border-radius: 50%; display: grid; place-items: center; background: var(--good); color: var(--surface); }
+.done h3 { font-family: var(--font-display); font-weight: 800; font-size: 24px; margin: 0; letter-spacing: -0.01em; }
+.done p { margin: 0; }
+.done-ref { font-size: 14px; color: var(--muted); }
+.done-ref b { font-family: var(--font-mono); font-size: 16px; color: var(--ink); background: var(--mark); color: var(--mark-ink); padding: 1px 6px; border-radius: 4px; }
+.done-steps { margin: 4px 0; padding-left: 20px; display: grid; gap: 6px; font-size: 14px; }
+.done-steps b { overflow-wrap: anywhere; }
+@media (prefers-reduced-motion: no-preference) { .done:not([hidden]) .done-mark { animation: pop .35s ease-out; } }
+@keyframes pop { from { transform: scale(.6); opacity: .3; } to { transform: none; opacity: 1; } }
+.hp { position: absolute; left: -10000px; width: 1px; height: 1px; overflow: hidden; }
+.toast { font-size: 13px; color: var(--good); min-height: 1.2em; }
+.row2 { display: grid; grid-template-columns: 96px minmax(0, 1fr); gap: 8px; }
+.radios { border: 0; margin: 0; padding: 0; display: grid; gap: 4px; }
+.radios legend { font-size: 13px; font-weight: 600; padding: 0; margin-bottom: 4px; }
+.send label.check { display: flex; gap: 8px; align-items: flex-start; font-weight: 400; font-size: 13.5px; cursor: pointer; }
+.send label.check input { width: auto; margin: 3px 0 0; accent-color: var(--accent); }
+.guardian { display: grid; gap: 10px; padding: 10px 12px; border-radius: 8px; background: var(--sunk); }
+
+/* Kjøpsbevis: et papirark, alltid lyst så det kan skrives ut */
+.receipt-wrap { margin-top: 32px; display: grid; gap: 12px; }
+.receipt-bar { display: flex; flex-wrap: wrap; justify-content: space-between; align-items: center; gap: 10px; }
+.receipt-bar h2 { font-family: var(--font-display); font-weight: 800; font-size: 22px; margin: 0; }
+.receipt {
+  --p-ink: #111827; --p-muted: #4B5563; --p-line: #D1D5DB; --p-bg: #FFFFFF;
+  background: var(--p-bg); color: var(--p-ink); border: 1px solid var(--line); border-radius: 6px;
+  padding: clamp(18px, 4vw, 40px); max-width: 860px; width: 100%; font-size: 13.5px;
+  box-shadow: 0 18px 40px -28px color-mix(in srgb, var(--ink) 50%, transparent);
+}
+.receipt header { display: flex; flex-wrap: wrap; justify-content: space-between; gap: 16px; align-items: flex-start; border-bottom: 2px solid var(--p-ink); padding-bottom: 14px; }
+.receipt header img { height: 40px; width: auto; }
+.receipt h3 { font-family: var(--font-display); font-size: 22px; margin: 0; letter-spacing: -0.01em; }
+.receipt .refbox { text-align: right; font-family: var(--font-mono); font-size: 12.5px; color: var(--p-muted); display: grid; gap: 2px; }
+.receipt .refbox b { color: var(--p-ink); font-size: 15px; }
+.receipt .parties { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 16px; margin: 16px 0; }
+@media (max-width: 560px) { .receipt .parties { grid-template-columns: minmax(0, 1fr); } }
+.receipt .parties div { min-width: 0; overflow-wrap: anywhere; }
+.receipt .lbl { display: block; font-size: 11px; font-weight: 600; letter-spacing: .08em; text-transform: uppercase; color: var(--p-muted); margin-bottom: 3px; }
+.receipt .tbl { overflow-x: auto; }
+.receipt table { width: 100%; border-collapse: collapse; font-variant-numeric: tabular-nums; min-width: 560px; }
+.receipt th { text-align: left; font-size: 11px; font-weight: 600; letter-spacing: .06em; text-transform: uppercase; color: var(--p-muted); border-bottom: 1px solid var(--p-ink); padding: 6px 6px; }
+.receipt td { border-bottom: 1px solid var(--p-line); padding: 7px 6px; vertical-align: top; }
+.receipt td.num, .receipt th.num { text-align: right; white-space: nowrap; }
+.receipt td.mono { font-family: var(--font-mono); font-size: 12px; white-space: nowrap; }
+.receipt td small { color: var(--p-muted); }
+.receipt tfoot td { border-bottom: 0; font-weight: 700; font-size: 15px; padding-top: 10px; }
+.receipt .terms { margin: 16px 0 0; color: var(--p-muted); font-size: 12px; display: grid; gap: 4px; }
+.receipt .signs { display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 28px; margin-top: 34px; }
+.receipt .signs div { border-top: 1px solid var(--p-ink); padding-top: 5px; font-size: 12px; color: var(--p-muted); }
+@media print {
+  body * { visibility: hidden !important; }
+  #receipt, #receipt * { visibility: visible !important; }
+  #receipt { position: absolute; left: 0; top: 0; border: 0; box-shadow: none; max-width: none; padding: 0; }
+  .mobilebar { display: none !important; }
+}
+
+.mobilebar { display: none; }
+@media (max-width: 900px) {
+  .mobilebar {
+    display: flex; position: fixed; left: 0; right: 0; bottom: 0; z-index: 5; justify-content: space-between; align-items: center; gap: 12px;
+    background: var(--ink); color: var(--bg);
+    padding: 10px max(16px, env(safe-area-inset-right, 0px)) calc(10px + env(safe-area-inset-bottom, 0px)) max(16px, env(safe-area-inset-left, 0px));
+  }
+  .mobilebar b { font-family: var(--font-mono); }
+  .mobilebar button { font: inherit; font-weight: 600; border: 0; border-radius: 8px; padding: 8px 14px; background: var(--mark); color: var(--mark-ink); cursor: pointer; }
+}
+.how { margin-top: 28px; display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 14px; }
+@media (max-width: 700px) { .how { grid-template-columns: minmax(0, 1fr); } }
+.how div { font-size: 13.5px; color: var(--muted); }
+.how b { display: block; color: var(--ink); font-family: var(--font-display); font-weight: 600; font-size: 15px; margin-bottom: 2px; }
+.loading { padding: 30px; text-align: center; color: var(--muted); }
+@media (prefers-reduced-motion: no-preference) { .row.open .detail { animation: drop .16s ease-out; } }
+@keyframes drop { from { opacity: .4; transform: translateY(-4px); } to { opacity: 1; transform: none; } }
+</style>
+
+<div class="wrap">
+  <div class="brandbar">
+    <img class="logo" src="logo.webp" alt="PokéNordic" width="156" height="54">
+    <span class="tag">Innkjøp av Pokémon-kort</span>
+  </div>
+
+  <header class="top">
+    <div>
+      <h1>Få penger eller nye produkter for Pokémon-kortene dine</h1>
+      <p class="lede">Søk opp kortene, velg variant og tilstand, og se prisen med en gang. Prisene følger TCGPlayer-markedet og oppdateres daglig.</p>
+      <div class="meta" id="meta"><span>Laster priser …</span></div>
+    </div>
+    <div class="modes" role="radiogroup" aria-label="Hvordan vil du få betalt?">
+      <button type="button" class="mode" role="radio" id="modeCash" data-mode="cash" aria-checked="true">
+        <span class="dot" aria-hidden="true"></span>
+        <span class="k">Utbetaling</span>
+        <span class="v" id="cashPct">80 %</span>
+        <span class="d">av markedspris, utbetalt til deg</span>
+      </button>
+      <button type="button" class="mode" role="radio" id="modeTrade" data-mode="trade" aria-checked="false">
+        <span class="dot" aria-hidden="true"></span>
+        <span class="k">Innbytte</span>
+        <span class="v" id="tradePct">85 %</span>
+        <span class="d" id="tradeDesc">av markedspris som tilgode i nettbutikken</span>
+        <span class="bonus" id="tradeBonus">+5 % ekstra</span>
+      </button>
+    </div>
+  </header>
+
+  <div class="grid">
+    <main>
+      <div class="searchbox">
+        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true"><circle cx="11" cy="11" r="7"></circle><path d="m20 20-3.5-3.5"></path></svg>
+        <input id="q" type="search" placeholder="Kortnavn, nummer eller sett …" autocomplete="off" spellcheck="false" aria-label="Søk etter kort" disabled>
+      </div>
+      <p class="hint">Eksempler: <code>charizard</code> · <code>pikachu 25/102</code> · <code>umbreon evolving</code> · <code>mew ex 151</code></p>
+
+      <div class="listhead"><h2 id="listTitle">Laster kortdatabase</h2><span id="listCount"></span></div>
+      <div class="results" id="results"><div class="loading">Henter rundt 28 000 kort …</div></div>
+
+      <section class="how" aria-label="Slik fungerer det">
+        <div><b>Markedspris</b>TCGPlayer «Market Price» i USD for riktig variant (normal, holo, reverse holo, 1st edition).</div>
+        <div><b>Tilstand</b>Prosentsatsen gjelder Near Mint. Lavere tilstand gir trekk: LP 85 %, MP 70 %, HP 50 %, Damaged 30 % av NM-prisen.</div>
+        <div><b>Foreløpig estimat</b>Endelig pris avtales når vi har sett kortene. Prisene er omregnet til NOK med Norges Banks kurs.</div>
+      </section>
+    </main>
+
+    <aside class="slip" id="slip" aria-label="Ditt tilbud">
+      <div class="slip-head"><h2>Ditt tilbud</h2><span id="slipCount">0 kort</span></div>
+      <ul class="items" id="items"></ul>
+      <div class="slip-empty" id="slipEmpty">Ingen kort ennå. Søk opp et kort, velg tilstand og trykk <b>Legg til</b>.</div>
+      <div class="total"><span id="totalLabel">Estimert utbetaling</span><b id="total">0,00 kr</b></div>
+      <div class="alt" id="alt" hidden><span id="altText"></span><button type="button" class="linkbtn" id="altSwitch"></button></div>
+      <form class="send" id="sendForm" novalidate>
+        <label for="sellerName">Navnet ditt
+          <input id="sellerName" type="text" autocomplete="name" placeholder="Ola Nordmann">
+        </label>
+        <label for="sellerContact">E-post eller telefon
+          <input id="sellerContact" type="text" autocomplete="email" placeholder="ola@eksempel.no / 900 00 000">
+        </label>
+        <label for="sellerStreet">Adresse
+          <input id="sellerStreet" type="text" autocomplete="street-address" placeholder="Storgata 1">
+        </label>
+        <div class="row2">
+          <label for="sellerZip">Postnr.
+            <input id="sellerZip" type="text" inputmode="numeric" autocomplete="postal-code" maxlength="4" placeholder="0150">
+          </label>
+          <label for="sellerCity">Poststed
+            <input id="sellerCity" type="text" autocomplete="address-level2" placeholder="Oslo">
+          </label>
+        </div>
+        <fieldset class="radios">
+          <legend>Alder</legend>
+          <label class="check"><input type="radio" name="age" id="ageAdult" value="adult"> Jeg er 18 år eller eldre</label>
+          <label class="check"><input type="radio" name="age" id="ageMinor" value="minor"> Jeg er under 18 år</label>
+        </fieldset>
+        <div class="guardian" id="guardian" hidden>
+          <p class="fineprint">Når du er under 18 år, må en forelder eller foresatt godkjenne salget og skrive under på kjøpsbeviset.</p>
+          <label for="guardianName">Foresattes navn
+            <input id="guardianName" type="text" autocomplete="off" placeholder="Kari Nordmann">
+          </label>
+          <label for="guardianContact">Foresattes telefon eller e-post
+            <input id="guardianContact" type="text" autocomplete="off" placeholder="900 00 000">
+          </label>
+        </div>
+        <label for="sellerNote">Kommentar (valgfritt)
+          <textarea id="sellerNote" placeholder="F.eks. henting i Oslo, kort i toploaders …"></textarea>
+        </label>
+        <div class="hp" aria-hidden="true"><label for="website">Nettsted <input id="website" type="text" tabindex="-1" autocomplete="off"></label></div>
+        <label class="check" for="confirmOwn"><input type="checkbox" id="confirmOwn"> Kortene er mine, og opplysningene over stemmer.</label>
+        <button class="btn" type="submit" id="makeBtn" disabled>Lag tilbud og kjøpsbevis</button>
+        <p class="fineprint" id="formMsg">Lista lagres bare i nettleseren din til du sender den.</p>
+        <p class="fineprint">Personvern: Navn og adresse trengs fordi vi må føre kjøpsbevis for alle kort vi kjøper (bokføringsforskriften § 8-10-3). Opplysningene brukes bare til å behandle tilbudet og føre regnskap, og lagres i 5 år slik bokføringsreglene krever.</p>
+        <div class="out-box" id="outBox" hidden>
+          <div class="sendto" id="sendTo"></div>
+          <pre id="outText"></pre>
+          <div class="actions">
+            <button class="btn ghost" type="button" id="copyBtn">Kopier teksten</button>
+            <button class="linkbtn" type="button" id="toReceipt">Se kjøpsbeviset</button>
+            <button class="linkbtn" type="button" id="clearBtn">Tøm lista</button>
+          </div>
+          <div class="toast" id="toast" role="status"></div>
+        </div>
+      </form>
+      <div class="done" id="donePanel" hidden role="status" aria-live="polite">
+        <div class="done-mark" aria-hidden="true"><svg width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12.5l4.5 4.5L19 7.5"></path></svg></div>
+        <h3>Tilbudet er innsendt</h3>
+        <p class="done-ref">Referanse <b id="doneRef">#</b></p>
+        <p id="doneSum"></p>
+        <ol class="done-steps">
+          <li>Vi går gjennom tilbudet og kontakter deg på <b id="doneContact"></b>.</li>
+          <li>Du sender eller leverer kortene til oss.</li>
+          <li>Vi kontrollerer kortene, og du skriver under på kjøpsbeviset.</li>
+          <li id="doneLast">Du får pengene utbetalt.</li>
+        </ol>
+        <p class="fineprint">Spørsmål? Skriv til <b>kundeservice@pokenordic.no</b> og oppgi referansen.</p>
+        <div class="actions">
+          <button class="btn ghost" type="button" id="doneReceipt">Se kjøpsbeviset</button>
+          <button class="linkbtn" type="button" id="newOffer">Start et nytt tilbud</button>
+        </div>
+      </div>
+    </aside>
+  </div>
+
+  <section class="receipt-wrap" id="receiptWrap" hidden aria-label="Kjøpsbevis">
+    <div class="receipt-bar">
+      <h2>Kjøpsbevis</h2>
+      <button class="btn ghost" type="button" id="printBtn" hidden>Skriv ut / lagre som PDF</button>
+    </div>
+    <article class="receipt" id="receipt"></article>
+  </section>
+</div>
+
+<div class="mobilebar" id="mobilebar"><span><span id="mbCount">0 kort</span> · <b id="mbTotal">0,00 kr</b></span><button type="button" id="mbGo">Se tilbudet</button></div>
+
+<script>
+/* ============ INNSTILLINGER (endre her) ============ */
+const CONFIG = {
+  cashRate: 0.80,                   // utbetaling: andel av TCGPlayer markedspris (Near Mint)
+  tradeRate: 0.85,                  // innbytte: andel av markedspris som tilgode i nettbutikken
+  shopUrl: null,                    // lenke til nettbutikken, f.eks. "https://pokenordic.no"
+  conditions: [                     // trekk for tilstand, ganges med satsen over
+    { code: "NM",  name: "Near Mint",         factor: 1.00, desc: "Som nytt. Skarpe hjørner, ingen riper. Høyst et par bittesmå hvite prikker på baksidekanten." },
+    { code: "LP",  name: "Lightly Played",    factor: 0.85, desc: "Litt slitasje: små hvite prikker langs kantene eller lett slitte hjørner. Ingen bretter eller krøll." },
+    { code: "MP",  name: "Moderately Played", factor: 0.70, desc: "Tydelig slitasje: hvite kanter, slitte hjørner, riper på forsiden eller en liten bulk." },
+    { code: "HP",  name: "Heavily Played",    factor: 0.50, desc: "Kraftig slitasje: mye hvitt på kantene, tydelige bretter eller krøll, merker på kortet." },
+    { code: "DMG", name: "Damaged",           factor: 0.30, desc: "Skadet: rifter, vannskade, store bretter, skrift eller klistremerkerester." }
+  ],
+  usdNokOverride: null,             // sett et tall (f.eks. 10.5) for å overstyre Norges Bank-kursen
+  buyerContact: "kundeservice@pokenordic.no",
+  submitUrl: "https://script.google.com/macros/s/AKfycbztuYAxSOWskMnvYkX-8nxBDgYKS9k_q9ymVKbKdJkCxIKKzZs1XnOs-JTFVZUYgoG34g/exec", // Google Apps Script-webappen, se README
+  buyer: {                          // kjøper på kjøpsbeviset
+    name: "PokeNordic Hornberg",
+    orgnr: "936 651 623 MVA",
+    address: "Vestneshaugen 35, 6390 Vestnes"
+  }
+};
+/* ================================================== */
+
+// Automatisk innsending virker på egen nettside (GitHub Pages), ikke inne i Claude-visningen
+const CAN_SUBMIT = !!CONFIG.submitUrl && !("claude" in window);
+const SUBMIT_LABEL = CAN_SUBMIT ? "Send tilbudet" : "Lag tilbud og kjøpsbevis";
+const VARIANT_LABEL = { N: "Normal", H: "Holo", R: "Reverse Holo", "1": "1st Edition", "1H": "1st Edition Holo", U: "Unlimited", UH: "Unlimited Holo" };
+const STORE_KEY = "pkmn-buylist-v1";
+const $ = (id) => document.getElementById(id);
+const nok = new Intl.NumberFormat("nb-NO", { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+const usd = new Intl.NumberFormat("en-US", { style: "currency", currency: "USD" });
+const fmtKr = (v) => nok.format(v) + " kr";
+const pct = (f) => Math.round(f * 100) + " %";
+
+let DATA = null, SETS = [], CARDS = [], BYID = new Map(), RATE = 10;
+let openId = null;
+let pick = { variant: null, cond: "NM", qty: 1 };
+let offer = [];
+let mode = "cash"; // "cash" = utbetaling, "trade" = innbytte
+const MODE = {
+  cash:  { rate: () => CONFIG.cashRate,  name: "Utbetaling", total: "Estimert utbetaling",    each: "Du får per kort" },
+  trade: { rate: () => CONFIG.tradeRate, name: "Innbytte",   total: "Estimert innbytteverdi", each: "Innbytteverdi per kort" }
+};
+const other = (m) => (m === "cash" ? "trade" : "cash");
+
+function norm(s) {
+  return s.toLowerCase().normalize("NFD").replace(/[̀-ͯ]/g, "").replace(/[’']/g, "").replace(/[^a-z0-9/ ]+/g, " ");
+}
+function normNum(n) { return n.split("/").map((p) => p.replace(/^0+(?=\d)/, "")).join("/"); }
+function payout(usdPrice, condCode, m = mode) {
+  const c = CONFIG.conditions.find((x) => x.code === condCode) || CONFIG.conditions[0];
+  return Math.round(usdPrice * MODE[m].rate() * c.factor * RATE * 100) / 100;
+}
+function setMode(m, save = true) {
+  if (!$("donePanel").hidden) return; // innsendt tilbud endres ikke
+  mode = m;
+  $("modeCash").setAttribute("aria-checked", m === "cash" ? "true" : "false");
+  $("modeTrade").setAttribute("aria-checked", m === "trade" ? "true" : "false");
+  if (save && DATA) persist();
+  if (!DATA) return;
+  document.querySelectorAll("#results .row").forEach((el) => el.replaceWith(renderRow(BYID.get(+el.dataset.id))));
+  renderOffer();
+  $("outBox").hidden = true;
+}
+const SPRITE_COLS = 20; // samme som COLS i build_images.py
+function thumb(c) {
+  const el = document.createElement("span");
+  el.className = "thumb";
+  el.setAttribute("aria-hidden", "true");
+  const rows = Math.ceil(c.set.n / SPRITE_COLS);
+  const col = c.pos % SPRITE_COLS, row = Math.floor(c.pos / SPRITE_COLS);
+  el.style.backgroundImage = "url(img/s" + c.si + ".webp)";
+  el.style.backgroundSize = SPRITE_COLS * 100 + "% " + rows * 100 + "%";
+  el.style.backgroundPosition = (col / (SPRITE_COLS - 1)) * 100 + "% " + (rows > 1 ? (row / (rows - 1)) * 100 : 0) + "%";
+  return el;
+}
+function bestUsd(card) { return Math.max(0, ...card.variants.map((v) => v[1] || 0)); }
+
+/* ---------- Data ---------- */
+async function load() {
+  try {
+    const res = await fetch("cards.json");
+    if (!res.ok) throw new Error(res.status);
+    DATA = await res.json();
+  } catch (e) {
+    $("results").innerHTML = '<div class="empty">Klarte ikke å laste kortdatabasen. Last inn siden på nytt.</div>';
+    $("listTitle").textContent = "Noe gikk galt";
+    return;
+  }
+  RATE = CONFIG.usdNokOverride || DATA.usdNok;
+  SETS = DATA.sets.map(([name, abbr, date]) => ({ name, abbr, date, n: 0 }));
+  CARDS = DATA.cards.map(([id, name, si, number, rarity, variants]) => {
+    const set = SETS[si];
+    const c = { id, name, set, number, rarity, variants, si, pos: set.n++ };
+    c.key = " " + norm(name + " " + set.name + " " + set.abbr + " " + rarity) + " " + number.toLowerCase() + " " + normNum(number).toLowerCase() + " ";
+    c.nkey = " " + norm(name) + " ";
+    BYID.set(id, c);
+    return c;
+  });
+  const upd = new Date(DATA.updated);
+  $("meta").innerHTML =
+    "<span>TCGPlayer-priser per " + upd.toLocaleDateString("nb-NO", { day: "numeric", month: "short", year: "numeric" }) + "</span>" +
+    "<span>1 USD = " + RATE.toLocaleString("nb-NO", { minimumFractionDigits: 2, maximumFractionDigits: 4 }) + " NOK" +
+    (CONFIG.usdNokOverride ? "" : " (Norges Bank " + new Date(DATA.rateDate).toLocaleDateString("nb-NO") + ")") + "</span>" +
+    "<span>" + CARDS.length.toLocaleString("nb-NO") + " kort i " + SETS.length + " sett</span>";
+  $("q").disabled = false;
+  restore();
+  setMode(mode, false);
+  renderOffer();
+  search("");
+}
+
+/* ---------- Søk ---------- */
+function search(q) {
+  const nq = norm(q).trim();
+  let list, title;
+  if (!nq) {
+    const newest = SETS.findIndex((s) => !/promo|misc|blister|prize pack|jumbo|deck|trick or trade|mcdonald/i.test(s.name));
+    list = CARDS.filter((c) => c.si === newest).sort((a, b) => bestUsd(b) - bestUsd(a)).slice(0, 12);
+    title = "Mest verdifulle i " + (SETS[newest] ? SETS[newest].name : "nyeste sett");
+  } else {
+    const toks = nq.split(/\s+/).filter(Boolean);
+    const scored = [];
+    for (const c of CARDS) {
+      let ok = true;
+      for (const t of toks) { if (!c.key.includes(t)) { ok = false; break; } }
+      if (!ok) continue;
+      let s = 0;
+      if (c.nkey.trim() === toks.join(" ")) s += 4;
+      if (c.nkey.startsWith(" " + toks[0])) s += 2;
+      if (toks.every((t) => c.nkey.includes(" " + t))) s += 1;
+      scored.push([s, bestUsd(c), c]);
+    }
+    scored.sort((a, b) => b[0] - a[0] || b[1] - a[1]);
+    title = scored.length ? "Treff for «" + q.trim() + "»" : "Ingen treff";
+    $("listCount").textContent = scored.length > 60 ? "viser 60 av " + scored.length.toLocaleString("nb-NO") : scored.length + " kort";
+    list = scored.slice(0, 60).map((x) => x[2]);
+  }
+  if (!nq) $("listCount").textContent = "søk for å finne dine kort";
+  $("listTitle").textContent = title;
+  renderResults(list, nq);
+}
+
+function renderResults(list, nq) {
+  const box = $("results");
+  box.textContent = "";
+  if (!list.length) {
+    box.innerHTML = '<div class="empty">Fant ingen kort som matcher. Prøv bare kortnavnet, eller nummeret som står nederst på kortet (f.eks. <code>4/102</code>).</div>';
+    return;
+  }
+  if (!list.some((c) => c.id === openId)) openId = null;
+  for (const c of list) box.appendChild(renderRow(c));
+}
+
+function renderRow(c) {
+  const row = document.createElement("div");
+  row.className = "row" + (c.id === openId ? " open" : "");
+  const head = document.createElement("button");
+  head.className = "head";
+  head.type = "button";
+  head.setAttribute("aria-expanded", c.id === openId ? "true" : "false");
+  const top = bestUsd(c);
+  head.innerHTML =
+    '<span class="cname"></span>' +
+    '<span class="cprice">' + (top ? "<b>" + fmtKr(payout(top, "NM")) + "</b><small>" + MODE[mode].name + ", NM</small>" : "<small>Ingen markedspris</small>") + "</span>" +
+    '<span class="csub"><span class="sname"></span> · <span class="num"></span><span class="rar"></span></span>';
+  head.querySelector(".cname").textContent = c.name;
+  head.querySelector(".sname").textContent = c.set.name;
+  head.querySelector(".num").textContent = c.number;
+  head.querySelector(".rar").textContent = c.rarity ? " · " + c.rarity : "";
+  head.prepend(thumb(c));
+  head.addEventListener("click", () => {
+    if (openId === c.id) { openId = null; } else {
+      openId = c.id;
+      const firstPriced = c.variants.find((v) => v[1]) || c.variants[0];
+      pick = { variant: firstPriced[0], cond: "NM", qty: 1 };
+    }
+    const parent = row.parentNode;
+    [...parent.children].forEach((el) => { if (el !== row && el.classList.contains("open")) { el.replaceWith(renderRow(BYID.get(+el.dataset.id))); } });
+    row.replaceWith(renderRow(c));
+  });
+  row.dataset.id = c.id;
+  row.appendChild(head);
+  if (c.id === openId) row.appendChild(renderDetail(c));
+  return row;
+}
+
+function renderDetail(c) {
+  const d = document.createElement("div");
+  d.className = "detail";
+
+  // Variant
+  const vWrap = document.createElement("div");
+  vWrap.innerHTML = '<div class="field-label">Variant</div><div class="chips"></div>';
+  const chips = vWrap.querySelector(".chips");
+  for (const [code, price] of c.variants) {
+    const b = document.createElement("button");
+    b.type = "button"; b.className = "chip";
+    b.setAttribute("aria-pressed", pick.variant === code ? "true" : "false");
+    b.disabled = !price;
+    b.innerHTML = "<span></span><small></small>";
+    b.firstChild.textContent = VARIANT_LABEL[code] || code;
+    b.lastChild.textContent = price ? usd.format(price) : "ingen pris";
+    b.addEventListener("click", () => { pick.variant = code; refresh(); });
+    chips.appendChild(b);
+  }
+  d.appendChild(vWrap);
+
+  // Tilstand
+  const cWrap = document.createElement("div");
+  cWrap.innerHTML = '<div class="field-label">Tilstand</div><div class="conds" role="group" aria-label="Tilstand"></div><p class="cond-desc"></p>';
+  const conds = cWrap.querySelector(".conds");
+  for (const cd of CONFIG.conditions) {
+    const b = document.createElement("button");
+    b.type = "button"; b.className = "cond";
+    b.setAttribute("aria-pressed", pick.cond === cd.code ? "true" : "false");
+    b.innerHTML = "<b></b><span></span>";
+    b.firstChild.textContent = cd.code;
+    b.lastChild.textContent = cd.name;
+    b.title = cd.name + " – " + pct(cd.factor) + " av NM-pris";
+    b.addEventListener("click", () => { pick.cond = cd.code; refresh(); });
+    conds.appendChild(b);
+  }
+  const cur = CONFIG.conditions.find((x) => x.code === pick.cond);
+  cWrap.querySelector(".cond-desc").textContent = cur.name + ": " + cur.desc;
+  d.appendChild(cWrap);
+
+  // Utregning
+  const v = c.variants.find((x) => x[0] === pick.variant);
+  const price = v && v[1];
+  const calc = document.createElement("div");
+  calc.className = "calc";
+  if (price) {
+    const each = payout(price, pick.cond);
+    calc.innerHTML =
+      '<div class="steps"><span>Markedspris ' + usd.format(price) + "</span>" +
+      "<span>× " + pct(MODE[mode].rate()) + " " + MODE[mode].name.toLowerCase() + (cur.factor !== 1 ? " × " + pct(cur.factor) + " (" + cur.code + ")" : " (NM)") + "</span>" +
+      "<span>× " + RATE.toLocaleString("nb-NO", { maximumFractionDigits: 4 }) + " NOK/USD</span></div>" +
+      '<div class="out"><small>' + MODE[mode].each + "</small><b>" + fmtKr(each) + "</b></div>";
+  } else {
+    calc.innerHTML = '<div class="steps"><span>Denne varianten har ingen markedspris på TCGPlayer.</span></div>';
+  }
+  d.appendChild(calc);
+
+  // Antall + legg til
+  const act = document.createElement("div");
+  act.className = "actions";
+  act.innerHTML =
+    '<div style="display:flex;gap:14px;align-items:center;flex-wrap:wrap"><div class="qty"><button type="button" aria-label="Færre">−</button><input type="number" min="1" max="999" aria-label="Antall" id="qty-' + c.id + '"><button type="button" aria-label="Flere">+</button></div>' +
+    '<a class="ext" target="_blank" rel="noopener" href="https://www.tcgplayer.com/product/' + c.id + '">Se bilde på TCGPlayer ↗</a></div>' +
+    '<button type="button" class="btn">Legg til i tilbudet</button>';
+  const [minus, plus] = act.querySelectorAll(".qty button");
+  const inp = act.querySelector(".qty input");
+  inp.value = pick.qty;
+  minus.onclick = () => { pick.qty = Math.max(1, pick.qty - 1); inp.value = pick.qty; };
+  plus.onclick = () => { pick.qty = Math.min(999, pick.qty + 1); inp.value = pick.qty; };
+  inp.oninput = () => { pick.qty = Math.min(999, Math.max(1, parseInt(inp.value, 10) || 1)); };
+  const add = act.querySelector(".btn");
+  add.disabled = !price;
+  add.onclick = () => {
+    addToOffer(c, pick.variant, pick.cond, pick.qty);
+    add.textContent = "Lagt til ✓";
+    setTimeout(() => { add.textContent = "Legg til i tilbudet"; }, 1200);
+  };
+  d.appendChild(act);
+
+  function refresh() {
+    const row = d.closest(".row");
+    row.replaceWith(renderRow(c));
+  }
+  return d;
+}
+
+/* ---------- Tilbud ---------- */
+function addToOffer(c, variant, cond, qty) {
+  if (!$("donePanel").hidden) $("newOffer").click(); // nytt kort etter innsending starter et nytt tilbud
+  const ex = offer.find((o) => o.id === c.id && o.variant === variant && o.cond === cond);
+  if (ex) ex.qty = Math.min(999, ex.qty + qty);
+  else offer.push({ id: c.id, variant, cond, qty });
+  persist();
+  renderOffer();
+}
+function lineInfo(o, m = mode) {
+  const c = BYID.get(o.id);
+  if (!c) return null;
+  const v = c.variants.find((x) => x[0] === o.variant);
+  const usdP = (v && v[1]) || 0;
+  const each = payout(usdP, o.cond, m);
+  return { c, usdP, each, sum: Math.round(each * o.qty * 100) / 100 };
+}
+function offerTotal(m) {
+  return Math.round(offer.reduce((s, o) => { const L = lineInfo(o, m); return s + (L ? L.sum : 0); }, 0) * 100) / 100;
+}
+function renderOffer() {
+  const ul = $("items");
+  ul.textContent = "";
+  let total = 0, count = 0;
+  offer.forEach((o, i) => {
+    const L = lineInfo(o);
+    if (!L) return;
+    total += L.sum; count += o.qty;
+    const li = document.createElement("li");
+    li.className = "item";
+    li.innerHTML =
+      '<span class="n"></span><span class="p"></span>' +
+      '<span class="s"><span class="sn"></span> · <span class="tag t1"></span> <span class="tag t2"></span> <span class="tag t3"></span></span>' +
+      '<div class="ctl"><div class="qty"><button type="button" aria-label="Færre">−</button><input type="number" min="0" max="999" aria-label="Antall"><button type="button" aria-label="Flere">+</button></div>' +
+      '<button type="button" class="linkbtn">Fjern</button><span class="each"></span></div>';
+    li.querySelector(".n").textContent = L.c.name;
+    li.querySelector(".p").textContent = fmtKr(L.sum);
+    li.querySelector(".sn").textContent = L.c.set.name;
+    li.querySelector(".t1").textContent = L.c.number;
+    li.querySelector(".t2").textContent = VARIANT_LABEL[o.variant] || o.variant;
+    li.querySelector(".t3").textContent = o.cond;
+    li.querySelector(".each").textContent = o.qty + " × " + fmtKr(L.each);
+    li.prepend(thumb(L.c));
+    const [minus, plus] = li.querySelectorAll(".qty button");
+    const inp = li.querySelector(".qty input");
+    inp.value = o.qty;
+    const setQty = (n) => { if (n <= 0) offer.splice(i, 1); else o.qty = Math.min(999, n); persist(); renderOffer(); };
+    minus.onclick = () => setQty(o.qty - 1);
+    plus.onclick = () => setQty(o.qty + 1);
+    inp.onchange = () => setQty(parseInt(inp.value, 10) || 0);
+    li.querySelector(".linkbtn").onclick = () => setQty(0);
+    ul.appendChild(li);
+  });
+  const countTxt = count + (count === 1 ? " kort" : " kort");
+  $("slipCount").textContent = countTxt;
+  $("mbCount").textContent = countTxt;
+  $("total").textContent = fmtKr(total);
+  $("mbTotal").textContent = fmtKr(total);
+  $("totalLabel").textContent = MODE[mode].total;
+  const alt = offerTotal(other(mode));
+  $("alt").hidden = offer.length === 0;
+  if (mode === "cash") {
+    $("altText").innerHTML = "Som innbytte: <b>" + fmtKr(alt) + "</b> (+" + fmtKr(Math.round((alt - total) * 100) / 100) + ")";
+    $("altSwitch").textContent = "Velg innbytte";
+  } else {
+    $("altText").innerHTML = "Som utbetaling: <b>" + fmtKr(alt) + "</b>";
+    $("altSwitch").textContent = "Velg utbetaling";
+  }
+  $("slipEmpty").hidden = offer.length > 0;
+  ul.hidden = offer.length === 0;
+  $("makeBtn").disabled = offer.length === 0;
+  $("makeBtn").textContent = SUBMIT_LABEL;
+  // Endret liste = gammelt tilbud/kjøpsbevis er ikke lenger riktig
+  $("outBox").hidden = true;
+  $("receiptWrap").hidden = true;
+}
+
+function persist() {
+  const f = {};
+  FIELDS.forEach((id) => { f[id] = $(id).value; });
+  try { localStorage.setItem(STORE_KEY, JSON.stringify({ offer, mode, f, age: ageValue() })); } catch (e) {}
+}
+function restore() {
+  try {
+    const s = JSON.parse(localStorage.getItem(STORE_KEY) || "null");
+    if (!s) return;
+    offer = (s.offer || []).filter((o) => BYID.has(o.id));
+    if (s.mode === "trade" || s.mode === "cash") mode = s.mode;
+    const f = s.f || { sellerName: s.name, sellerContact: s.contact, sellerNote: s.note };
+    FIELDS.forEach((id) => { $(id).value = f[id] || ""; });
+    if (s.age === "adult") $("ageAdult").checked = true;
+    if (s.age === "minor") $("ageMinor").checked = true;
+    $("guardian").hidden = ageValue() !== "minor";
+  } catch (e) {}
+}
+const FIELDS = ["sellerName", "sellerContact", "sellerStreet", "sellerZip", "sellerCity", "guardianName", "guardianContact", "sellerNote"];
+function ageValue() { return $("ageAdult").checked ? "adult" : $("ageMinor").checked ? "minor" : ""; }
+function val(id) { return $(id).value.trim(); }
+function esc(s) { return String(s).replace(/[&<>"']/g, (ch) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[ch])); }
+
+/* Én tilbudsrunde: samme referanse og nummerering i tekst og kjøpsbevis */
+function makeDeal() {
+  const ref = makeRef();
+  let next = 1, total = 0, count = 0;
+  const pad = (n) => String(n).padStart(2, "0");
+  const lines = [];
+  offer.forEach((o) => {
+    const L = lineInfo(o);
+    if (!L) return;
+    const from = next, to = next + o.qty - 1;
+    next = to + 1;
+    total += L.sum; count += o.qty;
+    lines.push({ o, L, nr: ref + "-" + pad(from) + (to > from ? "–" + pad(to) : "") });
+  });
+  return {
+    ref, date: new Date(), lines, count, total: Math.round(total * 100) / 100,
+    seller: {
+      name: val("sellerName"), contact: val("sellerContact"), street: val("sellerStreet"),
+      zip: val("sellerZip"), city: val("sellerCity"), minor: ageValue() === "minor",
+      guardianName: val("guardianName"), guardianContact: val("guardianContact"), note: val("sellerNote")
+    }
+  };
+}
+
+function renderReceipt(d) {
+  const b = CONFIG.buyer, s = d.seller;
+  const dateTxt = d.date.toLocaleDateString("nb-NO", { day: "2-digit", month: "2-digit", year: "numeric" });
+  const rows = d.lines.map(({ o, L, nr }) =>
+    "<tr><td class='mono'>" + esc(nr) + "</td><td>" + esc(L.c.name) + "<br><small>" + esc(L.c.set.name) + " · " + esc(L.c.number) + " · " +
+    esc(VARIANT_LABEL[o.variant] || o.variant) + "</small></td><td>" + esc(o.cond) + "</td><td class='num'>" + o.qty +
+    "</td><td class='num'>" + fmtKr(L.each) + "</td><td class='num'>" + fmtKr(L.sum) + "</td></tr>").join("");
+  const buyerLines = [b.name, b.orgnr ? "Org.nr. " + b.orgnr : "", b.address || ""].filter(Boolean).map(esc).join("<br>");
+  $("receipt").innerHTML =
+    "<header><div><img src='logo.webp' alt='" + esc(b.name) + "'><h3>Kjøpsbevis</h3></div>" +
+    "<div class='refbox'><span>Referanse</span><b>#" + esc(d.ref) + "</b><span>Dato " + dateTxt + "</span></div></header>" +
+    "<div class='parties'>" +
+      "<div><span class='lbl'>Kjøper</span>" + buyerLines + "</div>" +
+      "<div><span class='lbl'>Selger (privatperson)</span>" + esc(s.name) + "<br>" + esc(s.street) + "<br>" + esc(s.zip + " " + s.city) + "<br>" + esc(s.contact) +
+        (s.minor ? "<br><br><span class='lbl'>Foresatt</span>" + esc(s.guardianName) + "<br>" + esc(s.guardianContact) : "") + "</div>" +
+    "</div>" +
+    "<div class='tbl'><table><thead><tr><th>Varenr.</th><th>Kort</th><th>Tilstand</th><th class='num'>Antall</th><th class='num'>Pris/stk</th><th class='num'>Sum</th></tr></thead>" +
+    "<tbody>" + rows + "</tbody><tfoot><tr><td colspan='3'>" + d.count + " kort</td><td colspan='3' class='num'>Kjøpssum " + fmtKr(d.total) + "</td></tr></tfoot></table></div>" +
+    "<div class='terms'>" +
+      "<span><b>Oppgjør:</b> " + (mode === "trade" ? "Innbytte, tilgode i nettbutikken (" + pct(CONFIG.tradeRate) + " av markedspris)." : "Utbetaling (" + pct(CONFIG.cashRate) + " av markedspris).") + "</span>" +
+      "<span>Kortene er kjøpt fra privatperson og videreselges etter avansemetoden (merverdiavgiftsloven § 4-6). Kjøpsbevis etter bokføringsforskriften § 8-10-3.</span>" +
+      "<span>Prisene er foreløpige til kortene er kontrollert. Endres antall eller pris ved kontrollen, lages et nytt kjøpsbevis før underskrift.</span>" +
+      "<span>Ved underskrift bekrefter selger at kortene er selgers eiendom, og at opplysningene over er riktige.</span>" +
+    "</div>" +
+    "<div class='signs'><div>Sted og dato</div><div>Selgers underskrift</div>" + (s.minor ? "<div>Foresattes underskrift</div>" : "") + "</div>";
+  $("receiptWrap").hidden = false;
+}
+
+function makeRef() {
+  const chars = "ABCDEFGHJKLMNPQRSTUVWXYZ23456789";
+  let r = "";
+  for (let i = 0; i < 5; i++) r += chars[Math.floor(Math.random() * chars.length)];
+  return r;
+}
+
+function buildText(d) {
+  const s = d.seller, note = s.note;
+  const today = d.date.toLocaleDateString("nb-NO");
+  const lines = [];
+  const total = d.total, count = d.count;
+  lines.push("SALGSTILBUD TIL POKÉNORDIC  #" + d.ref + "  (" + today + ")");
+  lines.push("Selger: " + s.name + " – " + s.contact);
+  lines.push("Adresse: " + s.street + ", " + s.zip + " " + s.city);
+  lines.push(s.minor ? "Under 18 år. Foresatt: " + s.guardianName + " – " + s.guardianContact : "18 år eller eldre");
+  lines.push("Ønsker: " + MODE[mode].name + " (" + pct(MODE[mode].rate()) + " av markedspris" + (mode === "trade" ? ", tilgode i nettbutikken" : "") + ")");
+  lines.push("");
+  d.lines.forEach(({ o, L, nr }) => {
+    lines.push(nr + "  " + o.qty + "× " + L.c.name + " | " + L.c.set.name + " " + L.c.number + " | " + (VARIANT_LABEL[o.variant] || o.variant) + " | " + o.cond);
+    lines.push("    " + usd.format(L.usdP) + " → " + fmtKr(L.each) + (o.qty > 1 ? " × " + o.qty + " = " + fmtKr(L.sum) : "") + "   [TCGPlayer #" + L.c.id + "]");
+  });
+  lines.push("");
+  lines.push("Antall kort: " + count);
+  lines.push(MODE[mode].total + ": " + fmtKr(total));
+  lines.push("(" + MODE[other(mode)].name + " ville gitt " + fmtKr(offerTotal(other(mode))) + ")");
+  if (note) { lines.push(""); lines.push("Kommentar: " + note); }
+  lines.push("");
+  lines.push("Grunnlag: TCGPlayer Market Price " + new Date(DATA.updated).toLocaleDateString("nb-NO") + ", " + pct(MODE[mode].rate()) +
+    " for NM, 1 USD = " + RATE.toLocaleString("nb-NO", { maximumFractionDigits: 4 }) + " NOK. Endelig pris avtales etter inspeksjon.");
+  return lines.join("\n");
+}
+
+$("sendForm").addEventListener("submit", async (e) => {
+  e.preventDefault();
+  const fail = (msg, el) => { $("formMsg").textContent = msg; $("formMsg").style.color = "var(--warn)"; if (el) el.focus(); };
+  if (!val("sellerName")) return fail("Fyll inn navnet ditt.", $("sellerName"));
+  if (!val("sellerContact")) return fail("Fyll inn e-post eller telefon, så vi kan svare deg.", $("sellerContact"));
+  if (!val("sellerStreet")) return fail("Fyll inn adressen din. Den skal stå på kjøpsbeviset.", $("sellerStreet"));
+  if (!/^\d{4}$/.test(val("sellerZip"))) return fail("Postnummeret skal ha fire sifre.", $("sellerZip"));
+  if (!val("sellerCity")) return fail("Fyll inn poststed.", $("sellerCity"));
+  if (!ageValue()) return fail("Velg om du er over eller under 18 år.", $("ageAdult"));
+  if (ageValue() === "minor" && (!val("guardianName") || !val("guardianContact")))
+    return fail("Fyll inn navn og kontaktinfo til en forelder eller foresatt.", !val("guardianName") ? $("guardianName") : $("guardianContact"));
+  if (!$("confirmOwn").checked) return fail("Kryss av for at kortene er dine og at opplysningene stemmer.", $("confirmOwn"));
+  $("formMsg").style.color = "";
+  persist();
+  const deal = makeDeal();
+  $("outText").textContent = buildText(deal);
+  $("toast").textContent = "";
+
+  if (CAN_SUBMIT) {
+    let last = 0;
+    try { last = +localStorage.getItem(STORE_KEY + "-sent") || 0; } catch (err) {}
+    if (Date.now() - last < 60000) return fail("Du sendte nettopp et tilbud. Vent ett minutt før du sender igjen.");
+    const btn = $("makeBtn");
+    btn.disabled = true; btn.textContent = "Sender …";
+    try {
+      const res = await fetch(CONFIG.submitUrl, {
+        method: "POST",
+        headers: { "Content-Type": "text/plain;charset=utf-8" },
+        body: JSON.stringify(payload(deal))
+      });
+      const r = await res.json();
+      if (!r.ok) throw new Error(r.error || "ukjent feil");
+      try { localStorage.setItem(STORE_KEY + "-sent", String(Date.now())); } catch (err) {}
+      showResult(deal, true);
+      btn.textContent = "Sendt ✓";
+      return;
+    } catch (err) {
+      btn.disabled = false; btn.textContent = SUBMIT_LABEL;
+      showResult(deal, false);
+      return;
+    }
+  }
+  showResult(deal, null);
+});
+
+function payload(d) {
+  return {
+    website: $("website").value,
+    ref: d.ref, modeName: MODE[mode].name, rate: MODE[mode].rate(), count: d.count, total: d.total,
+    altTotal: offerTotal(other(mode)), usdNok: RATE, pricesDate: new Date(DATA.updated).toLocaleDateString("nb-NO"),
+    seller: d.seller,
+    lines: d.lines.map(({ o, L, nr }) => ({
+      nr, name: L.c.name, set: L.c.set.name, number: L.c.number, variant: VARIANT_LABEL[o.variant] || o.variant,
+      cond: o.cond, qty: o.qty, usd: L.usdP, each: L.each, sum: L.sum, tcgId: L.c.id
+    }))
+  };
+}
+
+// sent: true = sendt automatisk, false = sending feilet, null = ingen automatisk sending
+function showResult(d, sent) {
+  renderReceipt(d);
+  const st = $("sendTo");
+  st.textContent = "";
+  st.classList.toggle("bad", sent === false);
+  const contact = () => { const b = document.createElement("b"); b.textContent = CONFIG.buyerContact || "oss"; return b; };
+  if (sent === true) {
+    $("doneRef").textContent = "#" + d.ref;
+    $("doneSum").textContent = d.count + " kort · " + MODE[mode].total.replace("Estimert", "estimert") + " " + fmtKr(d.total);
+    $("doneContact").textContent = d.seller.contact;
+    $("doneLast").textContent = mode === "trade" ? "Du får tilgodebeløpet til bruk i nettbutikken." : "Du får pengene utbetalt.";
+    $("sendForm").hidden = true;
+    $("alt").hidden = true;
+    $("slip").classList.add("locked");
+    $("donePanel").hidden = false;
+    $("slip").scrollIntoView({ block: "start", behavior: "smooth" });
+    return;
+  } else if (sent === false) {
+    st.append("Vi klarte ikke å sende tilbudet automatisk. Kopier teksten under og send den til ", contact(), ".");
+    $("formMsg").textContent = "";
+  } else {
+    st.append("Kopier teksten og send den til ", contact(), ".");
+    $("formMsg").textContent = "Kjøpsbeviset skrives under når vi har kontrollert kortene.";
+  }
+  $("outText").hidden = sent === true;
+  $("copyBtn").hidden = sent === true;
+  $("outBox").hidden = false;
+  $("outBox").scrollIntoView({ block: "nearest", behavior: "smooth" });
+}
+$("copyBtn").addEventListener("click", () => {
+  const txt = $("outText").textContent;
+  const fallback = () => {
+    const r = document.createRange(); r.selectNodeContents($("outText"));
+    const sel = getSelection(); sel.removeAllRanges(); sel.addRange(r);
+    $("toast").textContent = "Teksten er markert. Trykk Ctrl+C (eller Kopier) for å kopiere.";
+  };
+  try {
+    navigator.clipboard.writeText(txt).then(() => { $("toast").textContent = "Kopiert. Lim inn i e-post eller melding."; }, fallback);
+  } catch (e) { fallback(); }
+});
+$("clearBtn").addEventListener("click", () => {
+  if ($("clearBtn").dataset.armed) {
+    offer = []; persist(); renderOffer();
+    delete $("clearBtn").dataset.armed; $("clearBtn").textContent = "Tøm lista";
+  } else {
+    $("clearBtn").dataset.armed = "1"; $("clearBtn").textContent = "Trykk igjen for å tømme";
+    setTimeout(() => { delete $("clearBtn").dataset.armed; $("clearBtn").textContent = "Tøm lista"; }, 3000);
+  }
+});
+FIELDS.forEach((id) => $(id).addEventListener("change", persist));
+["ageAdult", "ageMinor"].forEach((id) => $(id).addEventListener("change", () => { $("guardian").hidden = ageValue() !== "minor"; persist(); }));
+$("doneReceipt").addEventListener("click", () => $("receiptWrap").scrollIntoView({ behavior: "smooth", block: "start" }));
+$("newOffer").addEventListener("click", () => {
+  offer = [];
+  $("confirmOwn").checked = false;
+  $("donePanel").hidden = true;
+  $("sendForm").hidden = false;
+  $("slip").classList.remove("locked");
+  persist();
+  renderOffer();
+  $("q").focus();
+});
+$("toReceipt").addEventListener("click", () => $("receiptWrap").scrollIntoView({ behavior: "smooth", block: "start" }));
+// Utskrift virker på egen nettside (GitHub Pages), ikke inne i Claude-visningen
+if (!("claude" in window)) {
+  $("printBtn").hidden = false;
+  $("printBtn").addEventListener("click", () => window.print());
+}
+["modeCash", "modeTrade"].forEach((id) => $(id).addEventListener("click", (e) => setMode(e.currentTarget.dataset.mode)));
+$("altSwitch").addEventListener("click", () => setMode(other(mode)));
+$("cashPct").textContent = pct(CONFIG.cashRate);
+$("tradePct").textContent = pct(CONFIG.tradeRate);
+$("tradeBonus").textContent = "+" + Math.round((CONFIG.tradeRate - CONFIG.cashRate) * 100) + " % ekstra";
+if (CONFIG.shopUrl) {
+  const d = $("tradeDesc"); d.textContent = "av markedspris som tilgode i ";
+  const a = document.createElement("a"); a.href = CONFIG.shopUrl; a.target = "_blank"; a.rel = "noopener"; a.textContent = "nettbutikken";
+  a.addEventListener("click", (e) => e.stopPropagation());
+  d.append(a);
+}
+$("mbGo").addEventListener("click", () => $("slip").scrollIntoView({ behavior: "smooth", block: "start" }));
+
+let t;
+$("q").addEventListener("input", (e) => { clearTimeout(t); const v = e.target.value; t = setTimeout(() => search(v), 90); });
+
+load();
+</script>
