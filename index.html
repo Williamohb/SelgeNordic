@@ -306,13 +306,13 @@ a.ext { color: var(--accent); font-size: 13px; text-underline-offset: 2px; }
       <button type="button" class="mode" role="radio" id="modeCash" data-mode="cash" aria-checked="true">
         <span class="dot" aria-hidden="true"></span>
         <span class="k">Utbetaling</span>
-        <span class="v" id="cashPct">80 %</span>
+        <span class="v" id="cashPct">75 %</span>
         <span class="d">av markedspris, utbetalt til deg</span>
       </button>
       <button type="button" class="mode" role="radio" id="modeTrade" data-mode="trade" aria-checked="false">
         <span class="dot" aria-hidden="true"></span>
         <span class="k">Innbytte</span>
-        <span class="v" id="tradePct">85 %</span>
+        <span class="v" id="tradePct">80 %</span>
         <span class="d" id="tradeDesc">av markedspris som tilgode i nettbutikken</span>
         <span class="bonus" id="tradeBonus">+5 % ekstra</span>
       </button>
@@ -436,8 +436,8 @@ a.ext { color: var(--accent); font-size: 13px; text-underline-offset: 2px; }
 <script>
 /* ============ INNSTILLINGER (endre her) ============ */
 const CONFIG = {
-  cashRate: 0.80,                   // utbetaling: andel av TCGPlayer markedspris (Near Mint)
-  tradeRate: 0.85,                  // innbytte: andel av markedspris som tilgode i nettbutikken
+  cashRate: 0.75,                   // utbetaling: andel av TCGPlayer markedspris (Near Mint)
+  tradeRate: 0.80,                 // innbytte: andel av markedspris som tilgode i nettbutikken
   shopUrl: null,                    // lenke til nettbutikken, f.eks. "https://pokenordic.no"
   conditions: [                     // trekk for tilstand, ganges med satsen over
     { code: "NM",  name: "Near Mint",         factor: 1.00, desc: "Som nytt. Skarpe hjørner, ingen riper. Høyst et par bittesmå hvite prikker på baksidekanten." },
@@ -510,13 +510,14 @@ function setMode(m, save = true) {
   $("outBox").hidden = true;
 }
 const SPRITE_COLS = 20; // samme som COLS i build_images.py
+let IMG_VERSION = "";
 function thumb(c) {
   const el = document.createElement("span");
   el.className = "thumb";
   el.setAttribute("aria-hidden", "true");
   const rows = Math.ceil(c.set.n / SPRITE_COLS);
   const col = c.pos % SPRITE_COLS, row = Math.floor(c.pos / SPRITE_COLS);
-  el.style.backgroundImage = "url(img/s" + c.si + ".webp)";
+  el.style.backgroundImage = "url(img/s" + c.si + ".webp" + IMG_VERSION + ")";
   el.style.backgroundSize = SPRITE_COLS * 100 + "% " + rows * 100 + "%";
   el.style.backgroundPosition = (col / (SPRITE_COLS - 1)) * 100 + "% " + (rows > 1 ? (row / (rows - 1)) * 100 : 0) + "%";
   return el;
@@ -526,7 +527,7 @@ function bestUsd(card) { return Math.max(0, ...card.variants.map((v) => v[1] || 
 /* ---------- Data ---------- */
 async function load() {
   try {
-    const res = await fetch("cards.json");
+    const res = await fetch("cards.json", { cache: "no-cache" }); // alltid nyeste priser
     if (!res.ok) throw new Error(res.status);
     DATA = await res.json();
   } catch (e) {
@@ -535,6 +536,8 @@ async function load() {
     return;
   }
   RATE = CONFIG.usdNokOverride || DATA.usdNok;
+  // Bildearkene får nytt innhold ved hver bygging; versjonsnummeret hindrer at nettleseren viser gamle ark
+  if (!("claude" in window) && DATA.builtAt) IMG_VERSION = "?v=" + encodeURIComponent(DATA.builtAt);
   SETS = DATA.sets.map(([name, abbr, date, supp]) => ({ name, abbr, date, supp: !!supp, n: 0 }));
   CARDS = DATA.cards.map(([id, name, si, number, rarity, variants]) => {
     const set = SETS[si];

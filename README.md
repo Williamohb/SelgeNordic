@@ -1,14 +1,14 @@
 # Innkjøpsportal for Pokémon-kort
 
 Selgere søker opp kort, velger variant og tilstand og får en estimert utbetaling:
-**TCGPlayer Market Price × 80 % × tilstandstrekk × USD/NOK-kurs**.
+**TCGPlayer Market Price × 75 % (utbetaling) eller 80 % (innbytte) × tilstandstrekk × USD/NOK-kurs**.
 Til slutt lager de en tilbudstekst som de sender deg.
 
 ## Filer
 
 | Fil | Hva den gjør |
 |---|---|
-| `index.html` | Selve portalen. Innstillinger (80 %, tilstandstrekk, kontaktinfo) står i `CONFIG` øverst i skriptet. |
+| `index.html` | Selve portalen. Innstillinger (satser, tilstandstrekk, bulkpriser, kontaktinfo) står i `CONFIG` øverst i skriptet. |
 | `build_data.py` | Henter alle kort og priser fra tcgcsv.com (TCGPlayer-data) og kursen fra Norges Bank → `cards.json` |
 | `build_images.py` | Laster ned kortbilder og lager ett bildeark per sett → `img/` |
 | `make_site.py` | Setter sammen nettsiden i `_site/` |
