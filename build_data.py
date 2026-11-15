@@ -9,6 +9,7 @@ import csv
 import io
 import json
 import re
+import time
 import urllib.request
 from concurrent.futures import ThreadPoolExecutor
 from datetime import datetime, timezone
@@ -29,16 +30,22 @@ VARIANTS = {
 }
 
 
+def get_text(url, attempts=5):
+    """Henter en URL, og prøver på nytt ved nettverksfeil (2, 4, 8, 16 s pause)."""
+    for i in range(attempts):
+        try:
+            req = urllib.request.Request(url, headers=UA)
+            with urllib.request.urlopen(req, timeout=60) as r:
+                return r.read().decode("utf-8")
+        except Exception as e:
+            if i == attempts - 1:
+                raise RuntimeError(f"Klarte ikke å hente {url}: {e}") from e
+            print(f"  Feil mot {url} ({e}), prøver igjen ...", flush=True)
+            time.sleep(2 ** (i + 1))
+
+
 def get_json(url):
-    req = urllib.request.Request(url, headers=UA)
-    with urllib.request.urlopen(req, timeout=60) as r:
-        return json.loads(r.read().decode("utf-8"))
-
-
-def get_text(url):
-    req = urllib.request.Request(url, headers=UA)
-    with urllib.request.urlopen(req, timeout=60) as r:
-        return r.read().decode("utf-8")
+    return json.loads(get_text(url))
 
 
 def fetch_group(g):
