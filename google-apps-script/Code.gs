@@ -38,7 +38,7 @@ function doPost(e) {
       const now = new Date();
       const s = d.seller;
       offers.appendRow([
-        now, d.ref, "Ny", s.name, s.contact, s.street, s.zip, s.city,
+        now, d.ref, d.needsApproval ? "Venter på godkjenning" : "Ny", s.name, s.contact, s.street, s.zip, s.city,
         s.minor ? "Ja" : "Nei", s.guardianName || "", s.guardianContact || "",
         d.modeName, d.rate, d.count, d.total, d.altTotal, d.usdNok, d.pricesDate, s.note || ""
       ].map(safe_));
@@ -53,7 +53,7 @@ function doPost(e) {
 
     MailApp.sendEmail({
       to: OWNER_EMAIL,
-      subject: "Nytt tilbud #" + d.ref + " – " + d.seller.name + " – " + kr_(d.total) + " (" + d.modeName.toLowerCase() + ")",
+      subject: (d.needsApproval ? "⚠ KREVER GODKJENNING – " : "") + "Nytt tilbud #" + d.ref + " – " + d.seller.name + " – " + kr_(d.total) + " (" + d.modeName.toLowerCase() + ")",
       htmlBody: mailHtml_(d, true),
       replyTo: isEmail_(d.seller.contact) ? d.seller.contact : OWNER_EMAIL,
       name: SENDER_NAME
@@ -126,9 +126,12 @@ function mailHtml_(d, forOwner) {
     "<tr><td " + td + "><code>" + esc_(l.nr) + "</code></td><td " + td + ">" + esc_(l.name) + "<br><small>" + esc_(l.set) + " · " + esc_(l.number) + " · " + esc_(l.variant) +
     "</small></td><td " + td + ">" + esc_(l.cond) + "</td><td " + tdr + ">" + esc_(l.qty) + "</td><td " + tdr + ">" + kr_(l.each) + "</td><td " + tdr + ">" + kr_(l.sum) + "</td></tr>"
   ).join("");
+  const hold = '<p style="background:#fff3e0;border:1px solid #f0a35a;padding:10px 12px;border-radius:6px">';
   const intro = forOwner
-    ? "<p><b>Nytt tilbud #" + esc_(d.ref) + "</b> fra innkjøpsportalen.</p>"
-    : "<p>Hei " + esc_(s.name) + "!</p><p>Takk for tilbudet. Vi har mottatt det med referanse <b>#" + esc_(d.ref) + "</b> og tar kontakt med deg. Prisene under er foreløpige til vi har kontrollert kortene.</p>";
+    ? (d.needsApproval ? hold + "<b>Krever godkjenning.</b> Selgeren har fått beskjed om å vente med å sende kortene til du har bekreftet tilbudet. Svar på denne e-posten for å godkjenne eller avslå.</p>" : "") +
+      "<p><b>Nytt tilbud #" + esc_(d.ref) + "</b> fra innkjøpsportalen.</p>"
+    : "<p>Hei " + esc_(s.name) + "!</p><p>Takk for tilbudet. Vi har mottatt det med referanse <b>#" + esc_(d.ref) + "</b>. Prisene under er foreløpige til vi har kontrollert kortene.</p>" +
+      (d.needsApproval ? hold + "<b>Ikke send kortene ennå.</b> Vi går gjennom tilbudet og sender deg en bekreftelse på e-post før du sender.</p>" : "<p>Du kan sende kortene til oss nå. Legg ved en lapp med referansen.</p>");
   const sellerBlock = forOwner
     ? "<p><b>Selger:</b> " + esc_(s.name) + "<br>" + esc_(s.street) + ", " + esc_(s.zip) + " " + esc_(s.city) + "<br>" + esc_(s.contact) +
       (s.minor ? "<br><b>Under 18 år.</b> Foresatt: " + esc_(s.guardianName) + " – " + esc_(s.guardianContact) : "<br>18 år eller eldre") + "</p>"

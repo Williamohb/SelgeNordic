@@ -213,6 +213,8 @@ a.ext { color: var(--accent); font-size: 13px; text-underline-offset: 2px; }
 .done-ref b { font-family: var(--font-mono); font-size: 16px; color: var(--ink); background: var(--mark); color: var(--mark-ink); padding: 1px 6px; border-radius: 4px; }
 .done-steps { margin: 4px 0; padding-left: 20px; display: grid; gap: 6px; font-size: 14px; }
 .done-steps b { overflow-wrap: anywhere; }
+.done-hold { margin: 2px 0 0; padding: 10px 12px; border-radius: 8px; font-size: 14px; background: color-mix(in srgb, var(--warn) 12%, var(--surface)); border: 1px solid color-mix(in srgb, var(--warn) 45%, var(--line)); }
+.done.hold .done-mark { background: var(--warn); }
 @media (prefers-reduced-motion: no-preference) { .done:not([hidden]) .done-mark { animation: pop .35s ease-out; } }
 @keyframes pop { from { transform: scale(.6); opacity: .3; } to { transform: none; opacity: 1; } }
 .hp { position: absolute; left: -10000px; width: 1px; height: 1px; overflow: hidden; }
@@ -453,11 +455,8 @@ a.ext { color: var(--accent); font-size: 13px; text-underline-offset: 2px; }
         <h3>Tilbudet er innsendt</h3>
         <p class="done-ref">Referanse <b id="doneRef">#</b></p>
         <p id="doneSum"></p>
-        <ol class="done-steps">
-          <li>Send kortene til oss, med en lapp med referansen.</li>
-          <li>Innen 1–3 virkedager etter at vi har mottatt kortene, får du det endelige tilbudet på e-post til <b id="doneContact"></b>.</li>
-          <li id="doneLast">Godtar du, starter utbetalingen samme dag. Du kan også takke nei.</li>
-        </ol>
+        <p class="done-hold" id="doneHold" hidden><b>Ikke send kortene ennå.</b> Tilbud over <span class="approvalAmount">10 000 kr</span> går vi gjennom før du sender. Du får en bekreftelse fra oss på e-post.</p>
+        <ol class="done-steps" id="doneSteps"></ol>
         <p class="fineprint"><a class="ext" href="#slik" id="doneHow">Slik pakker og sender du kortene</a></p>
         <p class="fineprint">Spørsmål? Skriv til <b>kundeservice@pokenordic.no</b> og oppgi referansen.</p>
         <div class="actions">
@@ -488,7 +487,7 @@ a.ext { color: var(--accent); font-size: 13px; text-underline-offset: 2px; }
     </div>
     <ol class="steps">
       <li><b>Send tilbud her på siden</b><span>Søk opp kortene, velg tilstand og send inn. Du får en referanse med en gang.</span></li>
-      <li><b>Send kortene til oss</b><span>Pakk dem godt og legg ved en lapp med referansen. Bruk sending med sporing.</span></li>
+      <li><b>Send kortene til oss</b><span>Pakk dem godt og legg ved en lapp med referansen. Bruk sending med sporing. Er tilbudet over <span class="approvalAmount">10 000 kr</span>, venter du til vi har bekreftet det på e-post.</span></li>
       <li><b>Vi kontrollerer kortene</b><span>Innen 1–3 virkedager etter at vi har mottatt dem, sender vi deg det endelige tilbudet på e-post.</span></li>
       <li><b>Du godtar eller avslår</b><span>Avslår du, sender vi kortene tilbake. Da betaler du returfrakten.</span></li>
       <li><b>Du får betalt</b><span>Utbetalingen starter samme dag som du godtar tilbudet.</span></li>
@@ -497,7 +496,7 @@ a.ext { color: var(--accent); font-size: 13px; text-underline-offset: 2px; }
     <div class="info-grid">
       <div class="info-card">
         <h3>Frakt</h3>
-        <p>Du betaler frakten til oss. <b>Er det endelige tilbudet over 3 000 kr, dekker vi frakten.</b> Send da kvitteringen for frakten til <span class="mail">kundeservice@pokenordic.no</span> med referansen din, så legger vi beløpet til utbetalingen.</p>
+        <p>Du betaler frakten til oss. <b>Er tilbudet over 3 000 kr, dekker vi frakten til oss.</b> Send da kvitteringen for frakten til <span class="mail">kundeservice@pokenordic.no</span> med referansen din, så legger vi beløpet til utbetalingen.</p>
         <p>Velg sending med sporing. Kortene er ditt ansvar til vi har mottatt pakken, så vurder forsikret sending for verdifulle kort.</p>
       </div>
       <div class="info-card">
@@ -541,6 +540,10 @@ a.ext { color: var(--accent); font-size: 13px; text-underline-offset: 2px; }
       <details>
         <summary>Hvordan vurderer jeg tilstanden?</summary>
         <p>Trykk på et kort og velg tilstand. Under knappene står det hva hver tilstand betyr. Er du usikker, velg den laveste av de to du vurderer, så blir du ikke skuffet.</p>
+      </details>
+      <details>
+        <summary>Kan jeg sende kortene med en gang?</summary>
+        <p>Ja, hvis tilbudet er på <span class="approvalAmount">10 000 kr</span> eller mindre. Er det over, går vi gjennom tilbudet først og sender deg en bekreftelse på e-post. Vent med å sende til du har fått den.</p>
       </details>
       <details>
         <summary>Hvor lang tid tar det?</summary>
@@ -595,7 +598,8 @@ const CONFIG = {
     { id: "prexy-holo",    type: "Reverse/holofoil", era: "Før XY",                  cash: 850, trade: 900 },
     { id: "mixed",         type: "Blandet bulk",     era: "Usortert",                cash: 100, trade: 100 }
   ],
-  maxCardNok: 10000,                // kort med utbetalingspris over dette kan ikke legges i tilbudet (ta kontakt i stedet)
+  approvalNok: 10000,               // tilbud over dette: selgeren må vente på bekreftelse før kortene sendes
+  maxCardNok: 10000,               // kort med utbetalingspris over dette kan ikke legges i tilbudet (ta kontakt i stedet)
   featuredMaxNok: 10000,          // startlista viser bare kort med pris (NM) opptil dette beløpet
   usdNokOverride: null,             // sett et tall (f.eks. 10.5) for å overstyre Norges Bank-kursen
   buyerContact: "kundeservice@pokenordic.no",
@@ -645,6 +649,11 @@ function payout(usdPrice, condCode, m = mode) {
 function overCap(usdPrice, condCode) {
   return !!CONFIG.maxCardNok && payout(usdPrice, condCode, "cash") > CONFIG.maxCardNok;
 }
+// Store tilbud må godkjennes før kortene sendes. Summen regnes alltid som utbetaling, så den ikke avhenger av valget.
+function needsApproval(d) {
+  return !!CONFIG.approvalNok && offerTotal("cash") > CONFIG.approvalNok;
+}
+const approvalTxt = () => nok.format(CONFIG.approvalNok).replace(",00", "") + " kr";
 const capTxt = () => nok.format(CONFIG.maxCardNok).replace(",00", "") + " kr";
 function setMode(m, save = true) {
   if (!$("donePanel").hidden) return; // innsendt tilbud endres ikke
@@ -1152,6 +1161,7 @@ function buildText(d) {
   lines.push("");
   lines.push("Antall: " + countTxt(count, d.kg));
   lines.push(MODE[mode].total + ": " + fmtKr(total));
+  if (needsApproval(d)) lines.push("Over " + approvalTxt() + ": venter på bekreftelse før kortene sendes.");
   lines.push("(" + MODE[other(mode)].name + " ville gitt " + fmtKr(offerTotal(other(mode))) + ")");
   if (note) { lines.push(""); lines.push("Kommentar: " + note); }
   lines.push("");
@@ -1209,6 +1219,7 @@ function payload(d) {
   return {
     website: $("website").value,
     ref: d.ref, modeName: MODE[mode].name, rate: MODE[mode].rate(), count: d.count, kg: d.kg, countText: countTxt(d.count, d.kg), total: d.total,
+    needsApproval: needsApproval(d),
     altTotal: offerTotal(other(mode)), usdNok: RATE, pricesDate: new Date(DATA.updated).toLocaleDateString("nb-NO"),
     seller: d.seller,
     lines: d.lines.map(({ L, nr }) => ({
@@ -1228,10 +1239,26 @@ function showResult(d, sent) {
   if (sent === true) {
     $("doneRef").textContent = "#" + d.ref;
     $("doneSum").textContent = countTxt(d.count, d.kg) + " · " + MODE[mode].total.replace("Estimert", "estimert") + " " + fmtKr(d.total);
-    $("doneContact").textContent = d.seller.contact;
-    $("doneLast").textContent = mode === "trade"
+    const hold = needsApproval(d);
+    const steps = [];
+    if (hold) steps.push(["Vent på bekreftelsen vår på e-post til ", d.seller.contact, "."]);
+    steps.push([hold ? "Når du har fått bekreftelsen, sender du kortene til oss med en lapp med referansen." : "Send kortene til oss, med en lapp med referansen."]);
+    steps.push(["Innen 1–3 virkedager etter at vi har mottatt kortene, får du det endelige tilbudet på e-post" + (hold ? "." : " til "), hold ? "" : d.seller.contact, hold ? "" : "."]);
+    steps.push([mode === "trade"
       ? "Godtar du, får du butikkreditten samme dag. Du kan også takke nei."
-      : "Godtar du, starter utbetalingen samme dag (Vipps eller bank). Du kan også takke nei.";
+      : "Godtar du, starter utbetalingen samme dag (Vipps eller bank). Du kan også takke nei."]);
+    const ol = $("doneSteps");
+    ol.textContent = "";
+    steps.forEach(([a, b, c]) => {
+      const li = document.createElement("li");
+      li.append(a || "");
+      if (b) { const strong = document.createElement("b"); strong.textContent = b; li.append(strong); }
+      if (c) li.append(c);
+      ol.appendChild(li);
+    });
+    $("doneHold").hidden = !hold;
+    $("donePanel").classList.toggle("hold", hold);
+    $("donePanel").querySelector("h3").textContent = hold ? "Tilbudet er mottatt" : "Tilbudet er innsendt";
     $("sendForm").hidden = true;
     $("alt").hidden = true;
     $("slip").classList.add("locked");
@@ -1276,6 +1303,7 @@ FIELDS.forEach((id) => $(id).addEventListener("change", persist));
   const b = CONFIG.buyer;
   if (b.address) $("shipAddr").innerHTML = "Send til:<br><b>" + esc(b.name) + "</b><br><b>" + esc(b.address) + "</b>";
   document.querySelectorAll(".capAmount").forEach((el) => { el.textContent = capTxt(); });
+  document.querySelectorAll(".approvalAmount").forEach((el) => { el.textContent = approvalTxt(); });
   $("orgLine").textContent = [b.name, b.orgnr ? "Org.nr. " + b.orgnr : "", b.address || ""].filter(Boolean).join(" · ");
 })();
 $("doneReceipt").addEventListener("click", () => $("receiptWrap").scrollIntoView({ behavior: "smooth", block: "start" }));
