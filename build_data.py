@@ -57,6 +57,19 @@ def clean_name(name, number):
     return re.sub(r"\s{2,}", " ", NUM_SUFFIX.sub("", name)).strip()
 
 
+def release_date(g):
+    """Settets utgivelsesdato (ÅÅÅÅ-MM-DD), eller "" når den er ukjent.
+
+    For en del eldre sett mangler TCGPlayer dato, og tcgcsv fyller da inn
+    tidspunktet for siste oppdatering (med klokkeslett og «Z»). Slike
+    datoer er ikke ekte utgivelsesdatoer og blir ignorert.
+    """
+    p = g.get("publishedOn") or ""
+    if not p or p.endswith("Z") or "." in p or p[:10] > (g.get("modifiedOn") or "9999")[:10]:
+        return ""
+    return p[:10]
+
+
 def main():
     groups = get_json(f"{BASE}/groups")["results"]
     updated = get_text("https://tcgcsv.com/last-updated.txt").strip()
@@ -72,8 +85,8 @@ def main():
     with ThreadPoolExecutor(max_workers=8) as pool:
         results = list(pool.map(fetch_group, groups))
 
-    # Nyeste sett først
-    results.sort(key=lambda x: x[0].get("publishedOn") or "", reverse=True)
+    # Nyeste sett først (sett uten kjent utgivelsesdato havner sist)
+    results.sort(key=lambda x: release_date(x[0]), reverse=True)
 
     sets, cards = [], []
     for g, products, prices in results:
@@ -106,7 +119,8 @@ def main():
             sets.append([
                 g["name"],
                 g.get("abbreviation") or "",
-                (g.get("publishedOn") or "")[:10],
+                release_date(g),
+                1 if g.get("isSupplemental") else 0,  # 1 = promo-/tilleggssett
             ])
             cards.extend(set_cards)
 

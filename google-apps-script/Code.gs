@@ -137,7 +137,7 @@ function mailHtml_(d, forOwner) {
     "<p><b>Oppgjør:</b> " + esc_(d.modeName) + " (" + Math.round(d.rate * 100) + " % av markedspris)</p>" +
     '<table style="border-collapse:collapse;font-size:13px"><thead><tr style="text-align:left"><th ' + td + ">Varenr.</th><th " + td + ">Kort</th><th " + td +
     ">Tilstand</th><th " + tdr + ">Antall</th><th " + tdr + ">Pris/stk</th><th " + tdr + ">Sum</th></tr></thead><tbody>" + rows + "</tbody></table>" +
-    "<p><b>" + esc_(d.count) + " kort · Estimert sum " + kr_(d.total) + "</b>" + (forOwner ? " (alternativt " + kr_(d.altTotal) + ")" : "") + "</p>" +
+    "<p><b>" + esc_(d.countText || d.count + " kort") + " · Estimert sum " + kr_(d.total) + "</b>" + (forOwner ? " (alternativt " + kr_(d.altTotal) + ")" : "") + "</p>" +
     (s.note ? "<p><b>Kommentar:</b> " + esc_(s.note) + "</p>" : "") +
     '<p style="color:#666;font-size:12px">Priser: TCGPlayer Market Price ' + esc_(d.pricesDate) + ", 1 USD = " + esc_(d.usdNok) + " NOK.</p></div>";
 }

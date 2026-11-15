@@ -264,6 +264,23 @@ a.ext { color: var(--accent); font-size: 13px; text-underline-offset: 2px; }
   .mobilebar b { font-family: var(--font-mono); }
   .mobilebar button { font: inherit; font-weight: 600; border: 0; border-radius: 8px; padding: 8px 14px; background: var(--mark); color: var(--mark-ink); cursor: pointer; }
 }
+.bulk { margin-top: 30px; display: grid; gap: 12px; }
+.bulk-head h2 { font-family: var(--font-display); font-weight: 600; font-size: 17px; margin: 0 0 4px; }
+.bulk-head p { margin: 0; color: var(--muted); font-size: 13.5px; max-width: 70ch; }
+.bulk-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(min(100%, 280px), 1fr)); gap: 10px; }
+.bulk-card { background: var(--surface); border: 1px solid var(--line); border-radius: var(--radius); padding: 12px 14px 14px; display: grid; gap: 10px; align-content: start; }
+.bulk-card h3 { margin: 0; font-size: 12px; font-weight: 600; letter-spacing: .08em; text-transform: uppercase; color: var(--muted); }
+.bulk-row { display: grid; gap: 6px; }
+.bulk-row + .bulk-row { padding-top: 10px; border-top: 1px solid var(--line); }
+.bulk-row .bl { display: flex; flex-wrap: wrap; justify-content: space-between; align-items: baseline; gap: 2px 10px; min-width: 0; }
+.bulk-row .bl span { font-weight: 600; font-size: 14px; }
+.bulk-row .bl b { font-family: var(--font-mono); font-size: 12.5px; font-weight: 500; color: var(--muted); font-variant-numeric: tabular-nums; }
+.bulk-add { display: flex; gap: 6px; align-items: center; }
+.bulk-card, .bulk-row { grid-template-columns: minmax(0, 1fr); }
+.bulk-add input { flex: 1; width: 0; min-width: 0; font: inherit; font-family: var(--font-mono); font-size: 13px; padding: 7px 8px; border-radius: 8px; border: 1.5px solid var(--line); background: var(--surface); color: var(--ink); }
+.bulk-add input:focus { outline: none; border-color: var(--accent); }
+.btn.small { padding: 7px 10px; font-size: 13px; }
+.thumb.kg { display: grid; place-items: center; font-family: var(--font-mono); font-size: 10px; font-weight: 700; color: var(--muted); }
 .how { margin-top: 28px; display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 14px; }
 @media (max-width: 700px) { .how { grid-template-columns: minmax(0, 1fr); } }
 .how div { font-size: 13.5px; color: var(--muted); }
@@ -312,6 +329,14 @@ a.ext { color: var(--accent); font-size: 13px; text-underline-offset: 2px; }
 
       <div class="listhead"><h2 id="listTitle">Laster kortdatabase</h2><span id="listCount"></span></div>
       <div class="results" id="results"><div class="loading">Henter rundt 28 000 kort …</div></div>
+
+      <section class="bulk" aria-labelledby="bulkTitle">
+        <div class="bulk-head">
+          <h2 id="bulkTitle">Bulk etter vekt</h2>
+          <p>Har du mange vanlige kort? Sorter dem i gruppene under, eller lever dem usortert som blandet bulk. Vei dem på kjøkkenvekta og legg dem til. Vi betaler fast pris per kilo, og vekten kontrolleres når vi mottar kortene. Kort som er verdt mer, får du bedre betalt for hvis du legger dem inn enkeltvis.</p>
+        </div>
+        <div class="bulk-grid" id="bulkGrid"></div>
+      </section>
 
       <section class="how" aria-label="Slik fungerer det">
         <div><b>Markedspris</b>TCGPlayer «Market Price» i USD for riktig variant (normal, holo, reverse holo, 1st edition).</div>
@@ -421,6 +446,16 @@ const CONFIG = {
     { code: "HP",  name: "Heavily Played",    factor: 0.50, desc: "Kraftig slitasje: mye hvitt på kantene, tydelige bretter eller krøll, merker på kortet." },
     { code: "DMG", name: "Damaged",           factor: 0.30, desc: "Skadet: rifter, vannskade, store bretter, skrift eller klistremerkerester." }
   ],
+  bulk: [                           // bulk per kilo: kr ved utbetaling / kr ved innbytte
+    { id: "swsh-nonholo",  type: "Non-holo",         era: "Sword & Shield og nyere", cash: 70,  trade: 70 },
+    { id: "swsh-holo",     type: "Reverse/holofoil", era: "Sword & Shield og nyere", cash: 230, trade: 280 },
+    { id: "smxy-nonholo",  type: "Non-holo",         era: "Sun & Moon og XY",        cash: 110, trade: 140 },
+    { id: "smxy-holo",     type: "Reverse/holofoil", era: "Sun & Moon og XY",        cash: 450, trade: 500 },
+    { id: "prexy-nonholo", type: "Non-holo",         era: "Før XY",                  cash: 170, trade: 200 },
+    { id: "prexy-holo",    type: "Reverse/holofoil", era: "Før XY",                  cash: 850, trade: 900 },
+    { id: "mixed",         type: "Blandet bulk",     era: "Usortert",                cash: 100, trade: 100 }
+  ],
+  featuredMaxNok: 10000,           // startlista viser bare kort med pris (NM) opptil dette beløpet
   usdNokOverride: null,             // sett et tall (f.eks. 10.5) for å overstyre Norges Bank-kursen
   buyerContact: "kundeservice@pokenordic.no",
   submitUrl: "https://script.google.com/macros/s/AKfycbztuYAxSOWskMnvYkX-8nxBDgYKS9k_q9ymVKbKdJkCxIKKzZs1XnOs-JTFVZUYgoG34g/exec", // Google Apps Script-webappen, se README
@@ -468,6 +503,7 @@ function setMode(m, save = true) {
   $("modeCash").setAttribute("aria-checked", m === "cash" ? "true" : "false");
   $("modeTrade").setAttribute("aria-checked", m === "trade" ? "true" : "false");
   if (save && DATA) persist();
+  renderBulk();
   if (!DATA) return;
   document.querySelectorAll("#results .row").forEach((el) => el.replaceWith(renderRow(BYID.get(+el.dataset.id))));
   renderOffer();
@@ -499,7 +535,7 @@ async function load() {
     return;
   }
   RATE = CONFIG.usdNokOverride || DATA.usdNok;
-  SETS = DATA.sets.map(([name, abbr, date]) => ({ name, abbr, date, n: 0 }));
+  SETS = DATA.sets.map(([name, abbr, date, supp]) => ({ name, abbr, date, supp: !!supp, n: 0 }));
   CARDS = DATA.cards.map(([id, name, si, number, rarity, variants]) => {
     const set = SETS[si];
     const c = { id, name, set, number, rarity, variants, si, pos: set.n++ };
@@ -526,9 +562,14 @@ function search(q) {
   const nq = norm(q).trim();
   let list, title;
   if (!nq) {
-    const newest = SETS.findIndex((s) => !/promo|misc|blister|prize pack|jumbo|deck|trick or trade|mcdonald/i.test(s.name));
-    list = CARDS.filter((c) => c.si === newest).sort((a, b) => bestUsd(b) - bestUsd(a)).slice(0, 12);
-    title = "Mest verdifulle i " + (SETS[newest] ? SETS[newest].name : "nyeste sett");
+    // De mest verdifulle kortene fra de tre nyeste hovedsettene (ikke promo- og tilleggssett)
+    const recent = new Set(SETS.map((s, i) => [s, i])
+      .filter(([s]) => s.date && !s.supp && !/promo|misc|blister|prize pack|jumbo|deck|trick or trade|mcdonald/i.test(s.name))
+      .sort((a, b) => b[0].date.localeCompare(a[0].date))
+      .slice(0, 3).map(([, i]) => i));
+    list = CARDS.filter((c) => recent.has(c.si) && payout(bestUsd(c), "NM") <= CONFIG.featuredMaxNok)
+      .sort((a, b) => bestUsd(b) - bestUsd(a)).slice(0, 12);
+    title = "Populære kort fra de nyeste settene";
   } else {
     const toks = nq.split(/\s+/).filter(Boolean);
     const scored = [];
@@ -691,13 +732,82 @@ function addToOffer(c, variant, cond, qty) {
   persist();
   renderOffer();
 }
+function addBulk(id, kg) {
+  if (!$("donePanel").hidden) $("newOffer").click();
+  const ex = offer.find((o) => o.bulk === id);
+  if (ex) ex.kg = roundKg(ex.kg + kg);
+  else offer.push({ bulk: id, kg: roundKg(kg) });
+  persist();
+  renderOffer();
+}
+const roundKg = (n) => Math.min(999, Math.max(0, Math.round(n * 10) / 10));
+const fmtKg = (n) => n.toLocaleString("nb-NO", { maximumFractionDigits: 1 }) + " kg";
+const bulkDef = (id) => CONFIG.bulk.find((b) => b.id === id);
+
+/* Felles beskrivelse av en linje i tilbudet, enten enkeltkort eller bulk */
 function lineInfo(o, m = mode) {
+  if (o.bulk) {
+    const b = bulkDef(o.bulk);
+    if (!b) return null;
+    const each = b[m];
+    return {
+      bulk: true, name: /bulk/i.test(b.type) ? b.type : "Bulk " + b.type.toLowerCase(), set: b.era, number: "", variant: "per kg", cond: "Bulk",
+      qty: o.kg, qtyTxt: fmtKg(o.kg), eachTxt: fmtKr(each) + "/kg", cards: 0,
+      usdP: null, each, sum: Math.round(each * o.kg * 100) / 100, tcgId: ""
+    };
+  }
   const c = BYID.get(o.id);
   if (!c) return null;
   const v = c.variants.find((x) => x[0] === o.variant);
   const usdP = (v && v[1]) || 0;
   const each = payout(usdP, o.cond, m);
-  return { c, usdP, each, sum: Math.round(each * o.qty * 100) / 100 };
+  return {
+    bulk: false, c, name: c.name, set: c.set.name, number: c.number, variant: VARIANT_LABEL[o.variant] || o.variant, cond: o.cond,
+    qty: o.qty, qtyTxt: String(o.qty), eachTxt: fmtKr(each), cards: o.qty,
+    usdP, each, sum: Math.round(each * o.qty * 100) / 100, tcgId: c.id
+  };
+}
+function countTxt(cards, kg) {
+  const parts = [];
+  if (cards || !kg) parts.push(cards + " kort");
+  if (kg) parts.push(fmtKg(kg) + " bulk");
+  return parts.join(" + ");
+}
+
+function renderBulk() {
+  const grid = $("bulkGrid");
+  grid.textContent = "";
+  const eras = [...new Set(CONFIG.bulk.map((b) => b.era))];
+  for (const era of eras) {
+    const card = document.createElement("div");
+    card.className = "bulk-card";
+    const h = document.createElement("h3"); h.textContent = era; card.appendChild(h);
+    for (const b of CONFIG.bulk.filter((x) => x.era === era)) {
+      const row = document.createElement("div");
+      row.className = "bulk-row";
+      row.innerHTML =
+        '<div class="bl"><span></span><b></b></div>' +
+        '<div class="bulk-add"><input type="text" inputmode="decimal" autocomplete="off" placeholder="kg, f.eks. 1,5"><button type="button" class="btn small">Legg til</button></div>';
+      row.querySelector(".bl span").textContent = b.type;
+      row.querySelector(".bl b").textContent = fmtKr(b[mode]).replace(",00", "") + " per kg";
+      const inp = row.querySelector("input");
+      inp.id = "bulk-" + b.id;
+      inp.setAttribute("aria-label", "Kilo " + b.type + ", " + era);
+      const btn = row.querySelector("button");
+      const go = () => {
+        const kg = parseFloat(String(inp.value).replace(",", "."));
+        if (!(kg > 0)) { inp.focus(); return; }
+        addBulk(b.id, kg);
+        inp.value = "";
+        btn.textContent = "Lagt til ✓";
+        setTimeout(() => { btn.textContent = "Legg til"; }, 1200);
+      };
+      btn.onclick = go;
+      inp.addEventListener("keydown", (e) => { if (e.key === "Enter") { e.preventDefault(); go(); } });
+      card.appendChild(row);
+    }
+    grid.appendChild(card);
+  }
 }
 function offerTotal(m) {
   return Math.round(offer.reduce((s, o) => { const L = lineInfo(o, m); return s + (L ? L.sum : 0); }, 0) * 100) / 100;
@@ -705,11 +815,11 @@ function offerTotal(m) {
 function renderOffer() {
   const ul = $("items");
   ul.textContent = "";
-  let total = 0, count = 0;
+  let total = 0, count = 0, kg = 0;
   offer.forEach((o, i) => {
     const L = lineInfo(o);
     if (!L) return;
-    total += L.sum; count += o.qty;
+    total += L.sum; count += L.cards; if (L.bulk) kg += L.qty;
     const li = document.createElement("li");
     li.className = "item";
     li.innerHTML =
@@ -717,27 +827,38 @@ function renderOffer() {
       '<span class="s"><span class="sn"></span> · <span class="tag t1"></span> <span class="tag t2"></span> <span class="tag t3"></span></span>' +
       '<div class="ctl"><div class="qty"><button type="button" aria-label="Færre">−</button><input type="number" min="0" max="999" aria-label="Antall"><button type="button" aria-label="Flere">+</button></div>' +
       '<button type="button" class="linkbtn">Fjern</button><span class="each"></span></div>';
-    li.querySelector(".n").textContent = L.c.name;
+    li.querySelector(".n").textContent = L.name;
     li.querySelector(".p").textContent = fmtKr(L.sum);
-    li.querySelector(".sn").textContent = L.c.set.name;
-    li.querySelector(".t1").textContent = L.c.number;
-    li.querySelector(".t2").textContent = VARIANT_LABEL[o.variant] || o.variant;
-    li.querySelector(".t3").textContent = o.cond;
-    li.querySelector(".each").textContent = o.qty + " × " + fmtKr(L.each);
-    li.prepend(thumb(L.c));
+    li.querySelector(".sn").textContent = L.set;
+    li.querySelector(".t1").textContent = L.number;
+    li.querySelector(".t1").hidden = !L.number;
+    li.querySelector(".t2").textContent = L.bulk ? "kg" : L.variant;
+    li.querySelector(".t3").textContent = L.cond;
+    li.querySelector(".each").textContent = L.qtyTxt + " × " + L.eachTxt;
+    if (L.bulk) {
+      const t = document.createElement("span"); t.className = "thumb kg"; t.setAttribute("aria-hidden", "true"); t.textContent = "KG";
+      li.prepend(t);
+    } else li.prepend(thumb(L.c));
     const [minus, plus] = li.querySelectorAll(".qty button");
     const inp = li.querySelector(".qty input");
-    inp.value = o.qty;
-    const setQty = (n) => { if (n <= 0) offer.splice(i, 1); else o.qty = Math.min(999, n); persist(); renderOffer(); };
-    minus.onclick = () => setQty(o.qty - 1);
-    plus.onclick = () => setQty(o.qty + 1);
-    inp.onchange = () => setQty(parseInt(inp.value, 10) || 0);
+    const step = L.bulk ? 0.5 : 1;
+    inp.step = L.bulk ? "0.1" : "1";
+    inp.setAttribute("aria-label", L.bulk ? "Kilo" : "Antall");
+    inp.value = L.qty;
+    const setQty = (n) => {
+      if (!(n > 0)) offer.splice(i, 1);
+      else if (L.bulk) o.kg = roundKg(n); else o.qty = Math.min(999, Math.round(n));
+      persist(); renderOffer();
+    };
+    minus.onclick = () => setQty(L.qty - step);
+    plus.onclick = () => setQty(L.qty + step);
+    inp.onchange = () => setQty(parseFloat(String(inp.value).replace(",", ".")) || 0);
     li.querySelector(".linkbtn").onclick = () => setQty(0);
     ul.appendChild(li);
   });
-  const countTxt = count + (count === 1 ? " kort" : " kort");
-  $("slipCount").textContent = countTxt;
-  $("mbCount").textContent = countTxt;
+  const ct = countTxt(count, Math.round(kg * 10) / 10);
+  $("slipCount").textContent = ct;
+  $("mbCount").textContent = ct;
   $("total").textContent = fmtKr(total);
   $("mbTotal").textContent = fmtKr(total);
   $("totalLabel").textContent = MODE[mode].total;
@@ -768,7 +889,7 @@ function restore() {
   try {
     const s = JSON.parse(localStorage.getItem(STORE_KEY) || "null");
     if (!s) return;
-    offer = (s.offer || []).filter((o) => BYID.has(o.id));
+    offer = (s.offer || []).filter((o) => (o.bulk ? bulkDef(o.bulk) && o.kg > 0 : BYID.has(o.id)));
     if (s.mode === "trade" || s.mode === "cash") mode = s.mode;
     const f = s.f || { sellerName: s.name, sellerContact: s.contact, sellerNote: s.note };
     FIELDS.forEach((id) => { $(id).value = f[id] || ""; });
@@ -785,19 +906,19 @@ function esc(s) { return String(s).replace(/[&<>"']/g, (ch) => ({ "&": "&amp;", 
 /* Én tilbudsrunde: samme referanse og nummerering i tekst og kjøpsbevis */
 function makeDeal() {
   const ref = makeRef();
-  let next = 1, total = 0, count = 0;
+  let next = 1, total = 0, count = 0, kg = 0;
   const pad = (n) => String(n).padStart(2, "0");
   const lines = [];
   offer.forEach((o) => {
     const L = lineInfo(o);
     if (!L) return;
-    const from = next, to = next + o.qty - 1;
+    const from = next, to = next + (L.bulk ? 1 : o.qty) - 1; // bulk: ett varenummer per parti
     next = to + 1;
-    total += L.sum; count += o.qty;
+    total += L.sum; count += L.cards; if (L.bulk) kg += L.qty;
     lines.push({ o, L, nr: ref + "-" + pad(from) + (to > from ? "–" + pad(to) : "") });
   });
   return {
-    ref, date: new Date(), lines, count, total: Math.round(total * 100) / 100,
+    ref, date: new Date(), lines, count, kg: Math.round(kg * 10) / 10, total: Math.round(total * 100) / 100,
     seller: {
       name: val("sellerName"), contact: val("sellerContact"), street: val("sellerStreet"),
       zip: val("sellerZip"), city: val("sellerCity"), minor: ageValue() === "minor",
@@ -809,10 +930,11 @@ function makeDeal() {
 function renderReceipt(d) {
   const b = CONFIG.buyer, s = d.seller;
   const dateTxt = d.date.toLocaleDateString("nb-NO", { day: "2-digit", month: "2-digit", year: "numeric" });
-  const rows = d.lines.map(({ o, L, nr }) =>
-    "<tr><td class='mono'>" + esc(nr) + "</td><td>" + esc(L.c.name) + "<br><small>" + esc(L.c.set.name) + " · " + esc(L.c.number) + " · " +
-    esc(VARIANT_LABEL[o.variant] || o.variant) + "</small></td><td>" + esc(o.cond) + "</td><td class='num'>" + o.qty +
-    "</td><td class='num'>" + fmtKr(L.each) + "</td><td class='num'>" + fmtKr(L.sum) + "</td></tr>").join("");
+  const rows = d.lines.map(({ L, nr }) =>
+    "<tr><td class='mono'>" + esc(nr) + "</td><td>" + esc(L.name) + "<br><small>" + esc([L.set, L.number, L.bulk ? "" : L.variant].filter(Boolean).join(" · ")) +
+    "</small></td><td>" + esc(L.cond) + "</td><td class='num'>" + esc(L.qtyTxt) +
+    "</td><td class='num'>" + esc(L.eachTxt) + "</td><td class='num'>" + fmtKr(L.sum) + "</td></tr>").join("");
+  const hasBulk = d.lines.some(({ L }) => L.bulk);
   const buyerLines = [b.name, b.orgnr ? "Org.nr. " + b.orgnr : "", b.address || ""].filter(Boolean).map(esc).join("<br>");
   $("receipt").innerHTML =
     "<header><div><img src='logo.webp' alt='" + esc(b.name) + "'><h3>Kjøpsbevis</h3></div>" +
@@ -822,10 +944,11 @@ function renderReceipt(d) {
       "<div><span class='lbl'>Selger (privatperson)</span>" + esc(s.name) + "<br>" + esc(s.street) + "<br>" + esc(s.zip + " " + s.city) + "<br>" + esc(s.contact) +
         (s.minor ? "<br><br><span class='lbl'>Foresatt</span>" + esc(s.guardianName) + "<br>" + esc(s.guardianContact) : "") + "</div>" +
     "</div>" +
-    "<div class='tbl'><table><thead><tr><th>Varenr.</th><th>Kort</th><th>Tilstand</th><th class='num'>Antall</th><th class='num'>Pris/stk</th><th class='num'>Sum</th></tr></thead>" +
-    "<tbody>" + rows + "</tbody><tfoot><tr><td colspan='3'>" + d.count + " kort</td><td colspan='3' class='num'>Kjøpssum " + fmtKr(d.total) + "</td></tr></tfoot></table></div>" +
+    "<div class='tbl'><table><thead><tr><th>Varenr.</th><th>Kort</th><th>Tilstand</th><th class='num'>Antall</th><th class='num'>Pris/enhet</th><th class='num'>Sum</th></tr></thead>" +
+    "<tbody>" + rows + "</tbody><tfoot><tr><td colspan='3'>" + esc(countTxt(d.count, d.kg)) + "</td><td colspan='3' class='num'>Kjøpssum " + fmtKr(d.total) + "</td></tr></tfoot></table></div>" +
     "<div class='terms'>" +
       "<span><b>Oppgjør:</b> " + (mode === "trade" ? "Innbytte, tilgode i nettbutikken (" + pct(CONFIG.tradeRate) + " av markedspris)." : "Utbetaling (" + pct(CONFIG.cashRate) + " av markedspris).") + "</span>" +
+      (hasBulk ? "<span>Bulk kjøpes som samlet parti etter vekt, med fast kilopris. Vekten kontrolleres ved mottak.</span>" : "") +
       "<span>Kortene er kjøpt fra privatperson og videreselges etter avansemetoden (merverdiavgiftsloven § 4-6). Kjøpsbevis etter bokføringsforskriften § 8-10-3.</span>" +
       "<span>Prisene er foreløpige til kortene er kontrollert. Endres antall eller pris ved kontrollen, lages et nytt kjøpsbevis før underskrift.</span>" +
       "<span>Ved underskrift bekrefter selger at kortene er selgers eiendom, og at opplysningene over er riktige.</span>" +
@@ -853,11 +976,16 @@ function buildText(d) {
   lines.push("Ønsker: " + MODE[mode].name + " (" + pct(MODE[mode].rate()) + " av markedspris" + (mode === "trade" ? ", tilgode i nettbutikken" : "") + ")");
   lines.push("");
   d.lines.forEach(({ o, L, nr }) => {
-    lines.push(nr + "  " + o.qty + "× " + L.c.name + " | " + L.c.set.name + " " + L.c.number + " | " + (VARIANT_LABEL[o.variant] || o.variant) + " | " + o.cond);
-    lines.push("    " + usd.format(L.usdP) + " → " + fmtKr(L.each) + (o.qty > 1 ? " × " + o.qty + " = " + fmtKr(L.sum) : "") + "   [TCGPlayer #" + L.c.id + "]");
+    if (L.bulk) {
+      lines.push(nr + "  " + L.qtyTxt + " " + L.name + " | " + L.set);
+      lines.push("    " + L.eachTxt + " × " + L.qtyTxt + " = " + fmtKr(L.sum));
+      return;
+    }
+    lines.push(nr + "  " + o.qty + "× " + L.name + " | " + L.set + " " + L.number + " | " + L.variant + " | " + o.cond);
+    lines.push("    " + usd.format(L.usdP) + " → " + fmtKr(L.each) + (o.qty > 1 ? " × " + o.qty + " = " + fmtKr(L.sum) : "") + "   [TCGPlayer #" + L.tcgId + "]");
   });
   lines.push("");
-  lines.push("Antall kort: " + count);
+  lines.push("Antall: " + countTxt(count, d.kg));
   lines.push(MODE[mode].total + ": " + fmtKr(total));
   lines.push("(" + MODE[other(mode)].name + " ville gitt " + fmtKr(offerTotal(other(mode))) + ")");
   if (note) { lines.push(""); lines.push("Kommentar: " + note); }
@@ -915,12 +1043,12 @@ $("sendForm").addEventListener("submit", async (e) => {
 function payload(d) {
   return {
     website: $("website").value,
-    ref: d.ref, modeName: MODE[mode].name, rate: MODE[mode].rate(), count: d.count, total: d.total,
+    ref: d.ref, modeName: MODE[mode].name, rate: MODE[mode].rate(), count: d.count, kg: d.kg, countText: countTxt(d.count, d.kg), total: d.total,
     altTotal: offerTotal(other(mode)), usdNok: RATE, pricesDate: new Date(DATA.updated).toLocaleDateString("nb-NO"),
     seller: d.seller,
-    lines: d.lines.map(({ o, L, nr }) => ({
-      nr, name: L.c.name, set: L.c.set.name, number: L.c.number, variant: VARIANT_LABEL[o.variant] || o.variant,
-      cond: o.cond, qty: o.qty, usd: L.usdP, each: L.each, sum: L.sum, tcgId: L.c.id
+    lines: d.lines.map(({ L, nr }) => ({
+      nr, name: L.name, set: L.set, number: L.number, variant: L.variant,
+      cond: L.cond, qty: L.qty, usd: L.usdP, each: L.each, sum: L.sum, tcgId: L.tcgId
     }))
   };
 }
@@ -934,7 +1062,7 @@ function showResult(d, sent) {
   const contact = () => { const b = document.createElement("b"); b.textContent = CONFIG.buyerContact || "oss"; return b; };
   if (sent === true) {
     $("doneRef").textContent = "#" + d.ref;
-    $("doneSum").textContent = d.count + " kort · " + MODE[mode].total.replace("Estimert", "estimert") + " " + fmtKr(d.total);
+    $("doneSum").textContent = countTxt(d.count, d.kg) + " · " + MODE[mode].total.replace("Estimert", "estimert") + " " + fmtKr(d.total);
     $("doneContact").textContent = d.seller.contact;
     $("doneLast").textContent = mode === "trade" ? "Du får tilgodebeløpet til bruk i nettbutikken." : "Du får pengene utbetalt.";
     $("sendForm").hidden = true;
@@ -1010,5 +1138,6 @@ $("mbGo").addEventListener("click", () => $("slip").scrollIntoView({ behavior: "
 let t;
 $("q").addEventListener("input", (e) => { clearTimeout(t); const v = e.target.value; t = setTimeout(() => search(v), 90); });
 
+renderBulk();
 load();
 </script>
