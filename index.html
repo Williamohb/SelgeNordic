@@ -487,7 +487,7 @@ a.ext { color: var(--accent); font-size: 13px; text-underline-offset: 2px; }
     </div>
     <ol class="steps">
       <li><b>Send tilbud her på siden</b><span>Søk opp kortene, velg tilstand og send inn. Du får en referanse med en gang.</span></li>
-      <li><b>Send kortene til oss</b><span>Pakk dem godt og legg ved en lapp med referansen. Bruk sending med sporing. Er tilbudet over <span class="approvalAmount">10 000 kr</span>, venter du til vi har bekreftet det på e-post.</span></li>
+      <li><b>Send kortene til oss</b><span>Pakk dem godt, legg ved en lapp med referansen og send med Posten med sporing. Er tilbudet over <span class="approvalAmount">10 000 kr</span>, venter du til vi har bekreftet det på e-post.</span></li>
       <li><b>Vi kontrollerer kortene</b><span>Innen 1–3 virkedager etter at vi har mottatt dem, sender vi deg det endelige tilbudet på e-post.</span></li>
       <li><b>Du godtar eller avslår</b><span>Avslår du, sender vi kortene tilbake. Da betaler du returfrakten.</span></li>
       <li><b>Du får betalt</b><span>Utbetalingen starter samme dag som du godtar tilbudet.</span></li>
@@ -497,7 +497,7 @@ a.ext { color: var(--accent); font-size: 13px; text-underline-offset: 2px; }
       <div class="info-card">
         <h3>Frakt</h3>
         <p>Du betaler frakten til oss. <b>Er tilbudet over 3 000 kr, dekker vi frakten til oss.</b> Send da kvitteringen for frakten til <span class="mail">kundeservice@pokenordic.no</span> med referansen din, så legger vi beløpet til utbetalingen.</p>
-        <p>Velg sending med sporing. Kortene er ditt ansvar til vi har mottatt pakken, så vurder forsikret sending for verdifulle kort.</p>
+        <p><b>Send med Posten.</b> Vi anbefaler sporet sending, for eksempel Liten Norgespakke. Kortene er ditt ansvar til vi har mottatt pakken.</p>
       </div>
       <div class="info-card">
         <h3>Pakking</h3>
@@ -523,7 +523,7 @@ a.ext { color: var(--accent); font-size: 13px; text-underline-offset: 2px; }
         <h3>Hva vi kjøper</h3>
         <p>Engelske Pokémon-kort, enkeltvis eller som bulk etter vekt. Prisene følger TCGPlayer-markedet og oppdateres hver dag.</p>
         <p>Kort med utbetalingsverdi over <span class="capAmount">10 000 kr</span> kjøper vi etter avtale. De kan ikke legges inn her, men send oss en e-post.</p>
-        <p>Har du japanske kort, graderte kort (PSA, BGS, CGC) eller sealed produkter, ta kontakt på e-post før du sender.</p>
+        <p><b>Japanske kort og sealed produkter kommer snart.</b> Til da kan du ta kontakt på e-post, det samme gjelder graderte kort (PSA, BGS, CGC).</p>
       </div>
     </div>
 
@@ -607,7 +607,8 @@ const CONFIG = {
   buyer: {                          // kjøper på kjøpsbeviset
     name: "PokeNordic Hornberg",
     orgnr: "936 651 623 MVA",
-    address: "Vestneshaugen 35, 6390 Vestnes"
+    address: "Vestneshaugen 35, 6390 Vestnes",
+    phone: "+47 936 50 613"         // vises under sendeadressen (til fraktetiketten)
   }
 };
 /* ================================================== */
@@ -1301,7 +1302,8 @@ FIELDS.forEach((id) => $(id).addEventListener("change", persist));
 ["ageAdult", "ageMinor"].forEach((id) => $(id).addEventListener("change", () => { $("guardian").hidden = ageValue() !== "minor"; persist(); }));
 (() => {
   const b = CONFIG.buyer;
-  if (b.address) $("shipAddr").innerHTML = "Send til:<br><b>" + esc(b.name) + "</b><br><b>" + esc(b.address) + "</b>";
+  if (b.address) $("shipAddr").innerHTML = "Send med Posten til:<br><b>" + esc(b.name) + "</b><br><b>" + esc(b.address) + "</b>" +
+    (b.phone ? "<br><b>" + esc(b.phone) + "</b>" : "");
   document.querySelectorAll(".capAmount").forEach((el) => { el.textContent = capTxt(); });
   document.querySelectorAll(".approvalAmount").forEach((el) => { el.textContent = approvalTxt(); });
   $("orgLine").textContent = [b.name, b.orgnr ? "Org.nr. " + b.orgnr : "", b.address || ""].filter(Boolean).join(" · ");
