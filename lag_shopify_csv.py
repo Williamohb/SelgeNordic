@@ -2,15 +2,21 @@
 
 1. Lim inn TCGplayer-lenker i nye_kort.txt, én per linje. Bak lenken kan du
    skrive valg (alle er frivillige):
-       antall=2  pris=349  tilstand=LP  variant=reverse
+       antall=2  pris=349  tilstand=LP  variant=reverse  gang=1.5
+   (gang=1.5 betyr 1,5 x den vanlige prisen fra formelen)
 2. Kjør:  python lag_shopify_csv.py
-3. Bildene havner i produktbilder/. Push med GitHub Desktop, og vent til
-   Actions-kjøringen er ferdig (bildene må ligge på nettsiden før importen).
-4. Shopify: Produkter -> Importer -> velg fila i shopify-import/.
+3. Scriptet lager CSV-en i shopify-import/ og bildene i produktbilder/, og
+   laster produktene rett opp i Shopify (se shopify_opplasting.py). Lenkene som
+   ble lastet opp kommenteres ut i nye_kort.txt, så de ikke tas med neste gang.
 
-Kortdata (navn, sett, nummer, sjeldenhet, illustratør) hentes fra TCGplayer,
-markedsprisen fra tcgcsv.com (samme kilde som innkjøpsportalen) og
-USD/NOK-kursen fra Norges Bank. Kolonnene følger shopify-mal.csv, som er
+Med  python lag_shopify_csv.py --kun-csv  lages bare CSV-en og bildene, som før:
+push bildene med GitHub Desktop, vent til Actions-kjøringen er ferdig, og
+importer fila under Produkter -> Importer i Shopify.
+
+Kortdata (navn, sett, nummer, sjeldenhet, illustratør) hentes fra TCGplayer og
+markedsprisen fra tcgcsv.com (samme kilde som innkjøpsportalen). Salgsprisen er
+markedspris x fast kurs (10 kr per dollar) x påslag (1,25), rundet opp til
+nærmeste ...9 kr. Kolonnene følger shopify-mal.csv, som er
 overskriftsraden fra en produkteksport fra Shopify. Bytt den ut med en ny
 eksport hvis Shopify endrer kolonnene.
 """
@@ -30,7 +36,8 @@ from datetime import datetime
 from PIL import Image
 
 # ---------------------------------------------------------------- innstillinger
-PAASLAG = 1.30          # salgspris = markedspris (USD) x kurs x PAASLAG
+KURS = 10.0             # fast kurs: kroner per dollar
+PAASLAG = 1.25          # salgspris = markedspris (USD) x KURS x PAASLAG
 MINSTEPRIS = 19         # laveste pris i kroner
 STANDARD_ANTALL = 1     # lagerantall når du ikke skriver antall=
 STANDARD_TILSTAND = "NM"
@@ -71,15 +78,6 @@ def get_json(url):
     return json.loads(get_bytes(url).decode("utf-8"))
 
 
-def usd_nok():
-    text = get_bytes(
-        "https://data.norges-bank.no/api/data/EXR/B.USD.NOK.SP"
-        "?lastNObservations=1&format=csv"
-    ).decode("utf-8")
-    row = list(csv.DictReader(io.StringIO(text), delimiter=";"))[-1]
-    return float(row["OBS_VALUE"]), row["TIME_PERIOD"]
-
-
 # ---------------------------------------------------------------- bilder
 def make_padded_image(img, width=OUTPUT_WIDTH, height=OUTPUT_HEIGHT):
     """Legger bildet sentrert på hvit 920x920-bakgrunn uten å strekke det.
@@ -112,6 +110,38 @@ def rens_settnavn(name):
     return re.sub(r"^[A-Za-z0-9]+(?::| -)\s+", "", name).strip()
 
 
+UNDERSETT = re.compile(r"[:\s]+(Classic Collection|Trainer Gallery|Galarian Gallery)$")
+
+
+def del_sett(name):
+    # Undersett hører til hovedsettet:
+    # "ME: 30th Celebration Classic Collection" -> ("30th Celebration", "Classic Collection")
+    # "SWSH09: Brilliant Stars Trainer Gallery" -> ("Brilliant Stars", "Trainer Gallery")
+    renset = rens_settnavn(name)
+    m = UNDERSETT.search(renset)
+    return (renset[:m.start()], m.group(1)) if m else (renset, "")
+
+
+def tittel_sett(name):
+    # Delen etter " - " i tittelen: "Brilliant Stars (Trainer Gallery)", som ellers i butikken
+    hoved, under = del_sett(name)
+    return f"{hoved} ({under})" if under else hoved
+
+
+def ekspansjon_navn(name):
+    # Metafeltet «Ekspansjon»: promo-sett beholder TCGplayer-navnet med kode
+    # ("ME: Mega Evolution Promo"), vanlige sett får det rensede ("Delta Reign"),
+    # og undersett får hovedsettet ("30th Celebration", "Brilliant Stars").
+    if "promo" in name.lower():
+        return name.strip()
+    return del_sett(name)[0]
+
+
+def kortnummer(nummer, kode):
+    # Promokort har bare løpenummer: "108" i MEP -> "MEP108". "114/103" beholdes.
+    return f"{kode}{nummer}" if kode and nummer.isdigit() else nummer
+
+
 NUM_SUFFIX = re.compile(r" - [A-Za-z]*\d+[A-Za-z]*(?:/[A-Za-z0-9-]+)?(?=\s|$)")
 
 
@@ -136,8 +166,8 @@ def variant_sku(subtype):
     return ""
 
 
-def pris_nok(usd, kurs, tilstand):
-    kr = usd * kurs * PAASLAG * TILSTAND_FAKTOR[tilstand]
+def pris_nok(usd, tilstand):
+    kr = usd * KURS * PAASLAG * TILSTAND_FAKTOR[tilstand]
     kr = max(MINSTEPRIS, kr)
     return math.ceil((kr + 1) / 10) * 10 - 1  # rund opp til nærmeste ...9
 
@@ -148,7 +178,7 @@ def les_linjer():
         with open(INNDATA, "w", encoding="utf-8") as f:
             f.write(
                 "# Én TCGplayer-lenke per linje. Valg bak lenken (frivillig):\n"
-                "#   antall=2  pris=349  tilstand=NM|LP|MP|HP|DMG  variant=normal|holo|reverse\n"
+                "#   antall=2  pris=349  tilstand=NM|LP|MP|HP|DMG  variant=normal|holo|reverse  gang=1.5\n"
                 "# Linjer som starter med # hoppes over.\n"
             )
         sys.exit(f"Lagde {INNDATA}. Lim inn lenkene der og kjør igjen.")
@@ -193,7 +223,21 @@ def velg_variant(prices, ønsket):
 
 
 # ---------------------------------------------------------------- hovedløp
+def merk_opplastet(linjenumre):
+    """Kommenterer ut linjene i nye_kort.txt som er lastet opp."""
+    if not linjenumre:
+        return
+    with open(INNDATA, encoding="utf-8-sig") as f:
+        linjer = f.readlines()
+    merke = f"# lastet opp {datetime.now():%Y-%m-%d %H:%M}: "
+    for nr in linjenumre:
+        linjer[nr - 1] = merke + linjer[nr - 1]
+    with open(INNDATA, "w", encoding="utf-8") as f:
+        f.writelines(linjer)
+
+
 def main():
+    kun_csv = "--kun-csv" in sys.argv[1:]
     jobs = les_linjer()
     if not jobs:
         sys.exit(f"Ingen lenker i {INNDATA}.")
@@ -208,15 +252,16 @@ def main():
 
     os.makedirs(BILDEMAPPE, exist_ok=True)
     os.makedirs(UTMAPPE, exist_ok=True)
-    kurs, kursdato = usd_nok()
-    print(f"USD/NOK {kurs} ({kursdato}), påslag {PAASLAG}")
+    print(f"Kurs {KURS:g} kr per dollar, påslag {PAASLAG:g}")
 
     pris_cache = {}
     rows, by_handle, feil = [], {}, []
+    linjer_per_handle = {}
     for job in jobs:
         nr, pid = job["linje"], job["pid"]
         try:
-            if job["språk"].lower() != "english":
+            # Language=all betyr bare at lenken ikke er filtrert på språk. Kortdataene er engelske.
+            if job["språk"].lower() not in ("english", "all"):
                 raise ValueError(f"bare engelske kort støttes (lenken har Language={job['språk']})")
             tilstand = job.get("tilstand", STANDARD_TILSTAND).upper()
             if tilstand not in TILSTANDER:
@@ -236,20 +281,22 @@ def main():
             navn, ekstra = del_navn(d["productName"])
             nummer = (ca.get("number") or "").strip()
             sett = rens_settnavn(d["setName"])
+            ekspansjon = ekspansjon_navn(d["setName"])
             kode = d.get("setCode") or ""
             sjelden = d.get("rarityName") or ""
             artist = fa.get("Artist") or ""
             etikett = variant_etikett(subtype) if subtype else ""
 
+            # "Espeon ex MEP108 - Mega Evolution Promo", "Eevee 114/103 - Delta Reign"
             tittel = navn
             if nummer:
-                tittel += f" {nummer}"
-            if ekstra:
-                tittel += f" {ekstra}"
+                tittel += f" {kortnummer(nummer, kode)}"
             if subtype and not er_standard:
                 tittel += f" ({etikett})"
-            tittel += f" - {sett}"
-            handle = slug(tittel)
+            tittel += f" - {tittel_sett(d['setName'])}"
+            # Tillegget i parentes, f.eks. "(30th Celebration)", står ikke i tittelen,
+            # men i handle, så kort med samme nummer ikke blandes sammen
+            handle = slug(f"{tittel} {ekstra}")
             tnavn = TILSTANDER[tilstand]
             if tilstand != "NM":
                 handle += f"-{tilstand.lower()}"
@@ -257,13 +304,16 @@ def main():
             if handle in by_handle:  # samme kort to ganger: legg sammen antallet
                 r = rows[by_handle[handle]]
                 r[col["Variant Inventory Qty"]] = str(int(r[col["Variant Inventory Qty"]]) + antall)
+                linjer_per_handle[handle].append(nr)
                 print(f"  Linje {nr}: {tittel} står flere ganger, la sammen antallet")
                 continue
 
             if "pris" in job:
                 pris = float(job["pris"].replace(",", "."))
             elif prices.get(subtype) is not None:
-                pris = pris_nok(prices[subtype], kurs, tilstand)
+                # gang=1.5 gir 1,5 x den vanlige formelprisen
+                gang = float(job.get("gang", "1").replace(",", "."))
+                pris = pris_nok(prices[subtype] * gang, tilstand)
             else:
                 pris = None
 
@@ -311,7 +361,7 @@ def main():
             put("Google Shopping / Custom Label 3", tnavn)
             put("Google Shopping / Custom Label 4", etikett)
             put("custom.custom_card_artist", artist)
-            put("custom.ekspansjon", sett)
+            put("custom.ekspansjon", ekspansjon)
             put("custom.sjeldenhet", sjelden)
             put("custom.sprak", "Engelsk")
             put("custom.tilstand", tnavn)
@@ -320,6 +370,7 @@ def main():
             put("Status", "active" if pris is not None else "draft")
 
             by_handle[handle] = len(rows)
+            linjer_per_handle[handle] = [nr]
             rows.append(row)
             usd = prices.get(subtype)
             pris_tekst = f"{pris:.0f} kr" if pris is not None else "INGEN PRIS (lagres som utkast)"
@@ -335,8 +386,25 @@ def main():
             w.writerow(header)
             w.writerows(rows)
         print(f"\n{len(rows)} kort skrevet til {ut}")
-        print(f"Bildene ligger i {BILDEMAPPE}/. Push med GitHub Desktop og vent til "
-              "nettsiden er publisert før du importerer fila i Shopify.")
+        if kun_csv:
+            print(f"Bildene ligger i {BILDEMAPPE}/. Push med GitHub Desktop og vent til "
+                  "nettsiden er publisert før du importerer fila i Shopify.")
+        else:
+            import shopify_opplasting
+            try:
+                ok, opp_feil = shopify_opplasting.last_opp_csv(ut, BILDEMAPPE)
+            except shopify_opplasting.Feil as e:
+                ok, opp_feil = set(), []
+                print(f"\nKunne ikke laste opp til Shopify: {e}")
+                print(f"CSV-en er lagret. Prøv igjen med:  python shopify_opplasting.py {ut}")
+            merk_opplastet(sorted(n for h in ok for n in linjer_per_handle.get(h, [])))
+            print(f"\n{len(ok)} av {len(rows)} kort lastet opp til Shopify.")
+            if opp_feil:
+                print("\nFikk ikke lastet opp:")
+                for f_ in opp_feil:
+                    print("  " + f_)
+                print(f"Rett feilen og kjør  python shopify_opplasting.py {ut}  "
+                      "(kort som allerede er lastet opp hoppes over).")
     if feil:
         print("\nFikk ikke lagt til:")
         for f_ in feil:
