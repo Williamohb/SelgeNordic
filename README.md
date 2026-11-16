@@ -9,13 +9,13 @@ Til slutt lager de en tilbudstekst som de sender deg.
 | Fil | Hva den gjør |
 |---|---|
 | `index.html` | Selve portalen. Innstillinger (satser, tilstandstrekk, bulkpriser, kontaktinfo) står i `CONFIG` øverst i skriptet. |
-| `build_data.py` | Henter alle kort og priser fra tcgcsv.com (TCGPlayer-data) og kursen fra Norges Bank → `cards.json` |
-| `build_images.py` | Laster ned kortbilder og lager ett bildeark per sett → `img/` |
+| `build_data.py` | Henter alle engelske og japanske kort og priser fra tcgcsv.com (TCGPlayer-data) og kursen fra Norges Bank → `cards.json` og `cards-jp.json` |
+| `build_images.py` | Laster ned kortbilder og lager ett bildeark per sett → `img/` (engelske) og `img-jp/` (japanske) |
 | `make_site.py` | Setter sammen nettsiden i `_site/` |
 | `.github/workflows/pages.yml` | Kjører alt over hver natt og publiserer på GitHub Pages |
 | `google-apps-script/Code.gs` | Tar imot tilbud fra portalen, lagrer dem i Google Regneark og sender e-post |
 
-`cards.json`, `img/` og `_site/` lages automatisk og ligger ikke i repoet.
+`cards.json`, `cards-jp.json`, `img/`, `img-jp/` og `_site/` lages automatisk og ligger ikke i repoet.
 
 ## Oppsett med GitHub Desktop (én gang)
 
@@ -33,44 +33,9 @@ Til slutt lager de en tilbudstekst som de sender deg.
 
 ## Nye kort i Shopify-butikken fra TCGplayer-lenker
 
-`lag_shopify_csv.py` lager en importfil for Shopify og 920×920-produktbilder med hvit kant,
-og laster produktene rett opp i butikken.
-
-1. Lim inn TCGplayer-lenker i `nye_kort.txt`, én per linje. Bak lenken kan du skrive
-   `antall=2`, `pris=349`, `tilstand=LP` (NM, LP, MP, HP, DMG), `variant=reverse` (normal, holo, reverse)
-   og `gang=1.5` (1,5 × den vanlige prisen fra formelen).
-2. Kjør `python lag_shopify_csv.py`.
-3. Ferdig. Nye kort blir produkter med bilde, pris, lager og metafelt, og publiseres i nettbutikken.
-   Kort som allerede finnes (samme handle) får bare lageret økt. Lenkene som ble lastet opp
-   kommenteres ut i `nye_kort.txt`. CSV-en blir liggende i `shopify-import/` som logg.
-
-Feilet noe? Rett det og kjør `python shopify_opplasting.py shopify-import/<fil>.csv`. Kort som
-allerede er lastet opp fra den fila hoppes over (de står i `<fil>.csv.opplastet`).
-
-Vil du importere for hånd som før: `python lag_shopify_csv.py --kun-csv`, push `produktbilder/`
-med GitHub Desktop, vent til Actions er grønn, og velg fila under **Produkter → Importer** i Shopify.
-
-### Automatisk opplasting til Shopify (oppsett én gang)
-
-Scriptet trenger en egen app i butikken. Siden 2026 lages slike apper i Shopifys Dev Dashboard.
-
-1. Shopify-admin: **Innstillinger → Apper → Utvikle apper → Bygg apper i Dev Dashboard**
-   (eller gå til <https://dev.shopify.com>). Lag en app, f.eks. «PokéNordic opplasting».
-2. Lag en versjon av appen med disse tilgangene (Admin API scopes):
-   `write_products, write_inventory, read_locations, write_publications, write_files`.
-   Frigi (release) versjonen.
-3. **Installer** appen i butikken din.
-4. Under appens **Settings** finner du **Client ID** og **Client secret**.
-5. Kjør `python shopify_opplasting.py --sjekk` én gang. Da lages `shopify-tilgang.json`.
-   Fyll inn `butikk` (adressen som slutter på `.myshopify.com`), `client_id` og `client_secret`.
-   Fila står i `.gitignore` og skal aldri pushes.
-6. Kjør `python shopify_opplasting.py --sjekk` igjen. Den viser butikk, lokasjon, salgskanal og
-   om tilgangene er på plass. Har butikken flere lokasjoner, kan du legge til
-   `"lokasjon": "Navn på lager"` i `shopify-tilgang.json`.
-
-Pris = TCGPlayer-markedspris × 10 kr per dollar (fast kurs) × påslag (1,25), rundet opp til
-nærmeste …9 kr, minst 19 kr. Kurs, påslag, minstepris og trekk for dårligere tilstand står øverst i scriptet. Kolonnene følger
-`shopify-mal.csv` (overskriftsraden fra en Shopify-eksport).
+Scriptene som lager og laster opp enkeltkort til Shopify har flyttet til **PNordic**-repoet
+(`lag_shopify_csv.py` og `shopify_opplasting.py`). Mappa `produktbilder/` blir liggende her, fordi
+eldre produkter og manuell CSV-import bruker bildeadressene `https://selg.pokenordic.no/produktbilder/…`.
 
 ## Automatisk innsending (Google Regneark + e-post)
 
@@ -101,6 +66,7 @@ Tips:
 pip install pillow
 python build_data.py
 python build_images.py card_img_cache
+python build_images.py card_img_cache cards-jp.json img-jp
 python make_site.py
 python -m http.server 8000 --directory _site
 ```

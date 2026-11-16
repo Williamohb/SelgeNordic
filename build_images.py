@@ -4,7 +4,8 @@ Leser cards.json (fra build_data.py), laster ned TCGPlayer-bildene til en
 cache-mappe og skriver img/s<settindeks>.webp. Kortene ligger i samme
 rekkefølge som i cards.json, COLS per rad, CELL_W x CELL_H piksler hver.
 
-Kjør:  python build_images.py <cache-mappe>
+Kjør:  python build_images.py <cache-mappe>                         (engelske: cards.json -> img/)
+       python build_images.py <cache-mappe> cards-jp.json img-jp     (japanske)
 """
 import json
 import os
@@ -38,9 +39,11 @@ def fetch(args):
 
 def main():
     cache = sys.argv[1]
+    data_file = sys.argv[2] if len(sys.argv) > 2 else "cards.json"
+    out_dir = sys.argv[3] if len(sys.argv) > 3 else "img"
     os.makedirs(cache, exist_ok=True)
-    os.makedirs("img", exist_ok=True)
-    with open("cards.json", encoding="utf-8") as f:
+    os.makedirs(out_dir, exist_ok=True)
+    with open(data_file, encoding="utf-8") as f:
         d = json.load(f)
 
     jobs = [(c[0], cache) for c in d["cards"]
@@ -56,9 +59,9 @@ def main():
     for c in d["cards"]:
         by_set.setdefault(c[2], []).append(c[0])
 
-    for f in os.listdir("img"):
+    for f in os.listdir(out_dir):
         if f.endswith(".webp"):
-            os.remove(os.path.join("img", f))
+            os.remove(os.path.join(out_dir, f))
 
     total, missing = 0, 0
     for si, ids in by_set.items():
@@ -79,7 +82,7 @@ def main():
                     sheet.paste(im, ((i % COLS) * CELL_W, (i // COLS) * CELL_H))
             except Exception:
                 missing += 1
-        out = os.path.join("img", f"s{si}.webp")
+        out = os.path.join(out_dir, f"s{si}.webp")
         sheet.save(out, "WEBP", quality=QUALITY, method=6)
         total += os.path.getsize(out)
 

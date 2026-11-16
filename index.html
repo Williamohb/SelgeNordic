@@ -79,6 +79,13 @@ h1 { font-family: var(--font-display); font-weight: 800; font-size: clamp(28px, 
 .grid { display: grid; grid-template-columns: minmax(0, 1fr) 380px; gap: 24px; align-items: start; }
 @media (max-width: 900px) { .grid { grid-template-columns: minmax(0, 1fr); } }
 
+/* Engelske / japanske kort */
+.langs { display: inline-flex; gap: 4px; padding: 4px; margin-bottom: 12px; background: var(--sunk); border-radius: 999px; max-width: 100%; }
+.langs button { font: inherit; font-size: 14px; font-weight: 600; border: 0; background: transparent; color: var(--muted); padding: 8px 16px; border-radius: 999px; cursor: pointer; white-space: nowrap; }
+.langs button:hover { color: var(--ink); }
+.langs button[aria-checked="true"] { background: var(--surface); color: var(--ink); box-shadow: 0 1px 3px color-mix(in srgb, var(--ink) 18%, transparent); }
+.langs button:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+
 /* Søk */
 .searchbox { position: relative; }
 .searchbox input {
@@ -369,11 +376,16 @@ a.ext { color: var(--accent); font-size: 13px; text-underline-offset: 2px; }
 
   <div class="grid">
     <main>
+      <div class="langs" role="radiogroup" aria-label="Kortspråk">
+        <button type="button" role="radio" id="langEn" data-lang="en" aria-checked="true">Engelske kort</button>
+        <button type="button" role="radio" id="langJp" data-lang="jp" aria-checked="false">Japanske kort</button>
+      </div>
       <div class="searchbox">
         <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true"><circle cx="11" cy="11" r="7"></circle><path d="m20 20-3.5-3.5"></path></svg>
         <input id="q" type="search" placeholder="Kortnavn, nummer eller sett …" autocomplete="off" spellcheck="false" aria-label="Søk etter kort" disabled>
       </div>
       <p class="hint">Eksempler: <code>charizard</code> · <code>pikachu 25/102</code> · <code>umbreon evolving</code> · <code>mew ex 151</code></p>
+      <p class="hint" id="langNote" hidden>Japanske kort søker du opp med det engelske navnet, settnavnet eller settkoden, f.eks. <code>pikachu</code>, <code>terastal fest</code> eller <code>sv2a</code>.</p>
 
       <div class="listhead"><h2 id="listTitle">Laster kortdatabase</h2><span id="listCount"></span></div>
       <div class="results" id="results"><div class="loading">Henter rundt 28 000 kort …</div></div>
@@ -521,9 +533,9 @@ a.ext { color: var(--accent); font-size: 13px; text-underline-offset: 2px; }
       </div>
       <div class="info-card">
         <h3>Hva vi kjøper</h3>
-        <p>Engelske Pokémon-kort, enkeltvis eller som bulk etter vekt. Prisene følger TCGPlayer-markedet og oppdateres hver dag.</p>
+        <p>Engelske og japanske Pokémon-kort, enkeltvis eller som bulk etter vekt. Prisene følger TCGPlayer-markedet og oppdateres hver dag.</p>
         <p>Kort med utbetalingsverdi over <span class="capAmount">10 000 kr</span> kjøper vi etter avtale. De kan ikke legges inn her, men send oss en e-post.</p>
-        <p><b>Japanske kort og sealed produkter kommer snart.</b> Til da kan du ta kontakt på e-post, det samme gjelder graderte kort (PSA, BGS, CGC).</p>
+        <p><b>Sealed produkter kommer snart.</b> Til da kan du ta kontakt på e-post, det samme gjelder graderte kort (PSA, BGS, CGC).</p>
       </div>
     </div>
 
@@ -580,7 +592,9 @@ a.ext { color: var(--accent); font-size: 13px; text-underline-offset: 2px; }
 /* ============ INNSTILLINGER (endre her) ============ */
 const CONFIG = {
   cashRate: 0.78,                   // utbetaling: andel av TCGPlayer markedspris (Near Mint)
-  tradeRate: 0.83,                // innbytte: andel av markedspris som tilgode i nettbutikken
+  tradeRate: 0.83,                  // innbytte: andel av markedspris som tilgode i nettbutikken
+  jpCashRate: null,                 // egen utbetalingssats for japanske kort, f.eks. 0.70 (null = som engelske)
+  jpTradeRate: null,                // egen innbyttesats for japanske kort (null = som engelske)
   shopUrl: null,                    // lenke til nettbutikken, f.eks. "https://pokenordic.no"
   conditions: [                     // trekk for tilstand, ganges med satsen over
     { code: "NM",  name: "Near Mint",         factor: 1.00, desc: "Som nytt. Skarpe hjørner, ingen riper. Høyst et par bittesmå hvite prikker på baksidekanten." },
@@ -628,6 +642,20 @@ const fmtKr = (v) => nok.format(v) + " kr";
 const pct = (f) => Math.round(f * 100) + " %";
 
 let DATA = null, SETS = [], CARDS = [], BYID = new Map(), RATE = 10;
+// Språk: engelske og japanske kort har hver sin datafil og sine bildeark. Japansk lastes først når den trengs.
+const LANGS = {
+  en: { file: "cards.json",    img: "img",    label: "Engelske kort", short: "engelsk", data: null, sets: [], cards: [], ver: "" },
+  jp: { file: "cards-jp.json", img: "img-jp", label: "Japanske kort", short: "japansk", data: null, sets: [], cards: [], ver: "" }
+};
+let lang = "en";
+// Satsen for et kort: japanske kort kan ha egne satser (CONFIG.jpCashRate / jpTradeRate), ellers som engelske
+function rateFor(m, l = "en") {
+  if (l === "jp") {
+    const r = m === "cash" ? CONFIG.jpCashRate : CONFIG.jpTradeRate;
+    if (r) return r;
+  }
+  return m === "cash" ? CONFIG.cashRate : CONFIG.tradeRate;
+}
 let openId = null;
 let pick = { variant: null, cond: "NM", qty: 1 };
 let offer = [];
@@ -642,13 +670,13 @@ function norm(s) {
   return s.toLowerCase().normalize("NFD").replace(/[̀-ͯ]/g, "").replace(/[’']/g, "").replace(/[^a-z0-9/ ]+/g, " ");
 }
 function normNum(n) { return n.split("/").map((p) => p.replace(/^0+(?=\d)/, "")).join("/"); }
-function payout(usdPrice, condCode, m = mode) {
+function payout(usdPrice, condCode, m = mode, l = "en") {
   const c = CONFIG.conditions.find((x) => x.code === condCode) || CONFIG.conditions[0];
-  return Math.round(usdPrice * MODE[m].rate() * c.factor * RATE * 100) / 100;
+  return Math.round(usdPrice * rateFor(m, l) * c.factor * RATE * 100) / 100;
 }
 // Maksgrensen regnes alltid av utbetalingsprisen, så den ikke endrer seg når selgeren bytter til innbytte
-function overCap(usdPrice, condCode) {
-  return !!CONFIG.maxCardNok && payout(usdPrice, condCode, "cash") > CONFIG.maxCardNok;
+function overCap(usdPrice, condCode, l = "en") {
+  return !!CONFIG.maxCardNok && payout(usdPrice, condCode, "cash", l) > CONFIG.maxCardNok;
 }
 // Store tilbud må godkjennes før kortene sendes. Summen regnes alltid som utbetaling, så den ikke avhenger av valget.
 function needsApproval(d) {
@@ -669,14 +697,14 @@ function setMode(m, save = true) {
   $("outBox").hidden = true;
 }
 const SPRITE_COLS = 20; // samme som COLS i build_images.py
-let IMG_VERSION = "";
 function thumb(c) {
   const el = document.createElement("span");
   el.className = "thumb";
   el.setAttribute("aria-hidden", "true");
   const rows = Math.ceil(c.set.n / SPRITE_COLS);
   const col = c.pos % SPRITE_COLS, row = Math.floor(c.pos / SPRITE_COLS);
-  el.style.backgroundImage = "url(img/s" + c.si + ".webp" + IMG_VERSION + ")";
+  const L = LANGS[c.lang];
+  el.style.backgroundImage = "url(" + L.img + "/s" + c.si + ".webp" + L.ver + ")";
   el.style.backgroundSize = SPRITE_COLS * 100 + "% " + rows * 100 + "%";
   el.style.backgroundPosition = (col / (SPRITE_COLS - 1)) * 100 + "% " + (rows > 1 ? (row / (rows - 1)) * 100 : 0) + "%";
   return el;
@@ -684,39 +712,95 @@ function thumb(c) {
 function bestUsd(card) { return Math.max(0, ...card.variants.map((v) => v[1] || 0)); }
 
 /* ---------- Data ---------- */
-async function load() {
-  try {
-    const res = await fetch("cards.json", { cache: "no-cache" }); // alltid nyeste priser
-    if (!res.ok) throw new Error(res.status);
-    DATA = await res.json();
-  } catch (e) {
-    $("results").innerHTML = '<div class="empty">Klarte ikke å laste kortdatabasen. Last inn siden på nytt.</div>';
-    $("listTitle").textContent = "Noe gikk galt";
-    return;
-  }
-  RATE = CONFIG.usdNokOverride || DATA.usdNok;
+// Henter og forbereder kortdataene for ett språk (bare én gang)
+async function loadLang(l) {
+  const L = LANGS[l];
+  if (L.data) return L;
+  const res = await fetch(L.file, { cache: "no-cache" }); // alltid nyeste priser
+  if (!res.ok) throw new Error(res.status);
+  L.data = await res.json();
   // Bildearkene får nytt innhold ved hver bygging; versjonsnummeret hindrer at nettleseren viser gamle ark
-  if (!IN_CLAUDE && DATA.builtAt) IMG_VERSION = "?v=" + encodeURIComponent(DATA.builtAt);
-  SETS = DATA.sets.map(([name, abbr, date, supp]) => ({ name, abbr, date, supp: !!supp, n: 0 }));
-  CARDS = DATA.cards.map(([id, name, si, number, rarity, variants]) => {
-    const set = SETS[si];
-    const c = { id, name, set, number, rarity, variants, si, pos: set.n++ };
+  if (!IN_CLAUDE && L.data.builtAt) L.ver = "?v=" + encodeURIComponent(L.data.builtAt);
+  L.sets = L.data.sets.map(([name, abbr, date, supp]) => ({ name, abbr, date, supp: !!supp, n: 0 }));
+  L.cards = L.data.cards.map(([id, name, si, number, rarity, variants]) => {
+    const set = L.sets[si];
+    const c = { id, name, set, number, rarity, variants, si, pos: set.n++, lang: l };
     c.key = " " + norm(name + " " + set.name + " " + set.abbr + " " + rarity) + " " + number.toLowerCase() + " " + normNum(number).toLowerCase() + " ";
     c.nkey = " " + norm(name) + " ";
     BYID.set(id, c);
     return c;
   });
+  return L;
+}
+
+function renderMeta() {
   const upd = new Date(DATA.updated);
   $("meta").innerHTML =
     "<span>TCGPlayer-priser per " + upd.toLocaleDateString("nb-NO", { day: "numeric", month: "short", year: "numeric" }) + "</span>" +
     "<span>1 USD = " + RATE.toLocaleString("nb-NO", { minimumFractionDigits: 2, maximumFractionDigits: 4 }) + " NOK" +
     (CONFIG.usdNokOverride ? "" : " (Norges Bank " + new Date(DATA.rateDate).toLocaleDateString("nb-NO") + ")") + "</span>" +
-    "<span>" + CARDS.length.toLocaleString("nb-NO") + " kort i " + SETS.length + " sett</span>";
+    "<span>" + CARDS.length.toLocaleString("nb-NO") + " " + LANGS[lang].short + "e kort i " + SETS.length + " sett</span>";
+}
+
+// Viser satsene for valgt språk i boksene for utbetaling og innbytte
+function renderRates() {
+  const c = rateFor("cash", lang), t = rateFor("trade", lang);
+  $("cashPct").textContent = pct(c);
+  $("tradePct").textContent = pct(t);
+  $("tradeBonus").textContent = "+" + Math.round((t - c) * 100) + " % ekstra";
+}
+
+async function setLang(l, save = true) {
+  if (!LANGS[l]) l = "en";
+  lang = l;
+  $("langEn").setAttribute("aria-checked", l === "en" ? "true" : "false");
+  $("langJp").setAttribute("aria-checked", l === "jp" ? "true" : "false");
+  $("q").placeholder = l === "jp" ? "Kortnavn på engelsk, nummer eller sett …" : "Kortnavn, nummer eller sett …";
+  $("langNote").hidden = l !== "jp";
+  let L = LANGS[l];
+  if (!L.data) {
+    $("results").innerHTML = '<div class="loading">Henter ' + L.label.toLowerCase() + " …</div>";
+    $("listTitle").textContent = L.label;
+    $("listCount").textContent = "";
+    try { L = await loadLang(l); }
+    catch (e) {
+      $("results").innerHTML = '<div class="empty">Klarte ikke å laste ' + L.label.toLowerCase() + ". Prøv igjen litt senere.</div>";
+      return;
+    }
+    if (lang !== l) return; // selgeren har byttet igjen mens dataene ble hentet
+  }
+  SETS = L.sets; CARDS = L.cards;
+  if (save) { try { localStorage.setItem(STORE_KEY + "-lang", l); } catch (e) {} }
+  openId = null;
+  renderRates();
+  renderMeta();
+  search($("q").value);
+}
+
+async function load() {
+  try {
+    await loadLang("en");
+  } catch (e) {
+    $("results").innerHTML = '<div class="empty">Klarte ikke å laste kortdatabasen. Last inn siden på nytt.</div>';
+    $("listTitle").textContent = "Noe gikk galt";
+    return;
+  }
+  DATA = LANGS.en.data;
+  RATE = CONFIG.usdNokOverride || DATA.usdNok;
+  SETS = LANGS.en.sets; CARDS = LANGS.en.cards;
+  // Har selgeren japanske kort i en lagret liste, eller valgte japansk sist, hentes de japanske dataene også
+  let savedLang = "en", needJp = false;
+  try {
+    savedLang = localStorage.getItem(STORE_KEY + "-lang") || "en";
+    const s = JSON.parse(localStorage.getItem(STORE_KEY) || "null");
+    needJp = !!(s && (s.offer || []).some((o) => o.lang === "jp"));
+  } catch (e) {}
+  if (needJp || savedLang === "jp") { try { await loadLang("jp"); } catch (e) {} }
   $("q").disabled = false;
   restore();
   setMode(mode, false);
   renderOffer();
-  search("");
+  await setLang(savedLang === "jp" && LANGS.jp.data ? "jp" : "en", false);
 }
 
 /* ---------- Søk ---------- */
@@ -726,12 +810,12 @@ function search(q) {
   if (!nq) {
     // De mest verdifulle kortene fra de tre nyeste hovedsettene (ikke promo- og tilleggssett)
     const recent = new Set(SETS.map((s, i) => [s, i])
-      .filter(([s]) => s.date && !s.supp && !/promo|misc|blister|prize pack|jumbo|deck|trick or trade|mcdonald/i.test(s.name))
+      .filter(([s]) => s.date && !s.supp && !/promo|misc|blister|prize pack|jumbo|deck|starter|trick or trade|mcdonald|collection box|gift/i.test(s.name))
       .sort((a, b) => b[0].date.localeCompare(a[0].date))
       .slice(0, 3).map(([, i]) => i));
-    list = CARDS.filter((c) => recent.has(c.si) && payout(bestUsd(c), "NM") <= CONFIG.featuredMaxNok)
+    list = CARDS.filter((c) => recent.has(c.si) && payout(bestUsd(c), "NM", mode, c.lang) <= CONFIG.featuredMaxNok)
       .sort((a, b) => bestUsd(b) - bestUsd(a)).slice(0, 12);
-    title = "Populære kort fra de nyeste settene";
+    title = lang === "jp" ? "Populære japanske kort fra de nyeste settene" : "Populære kort fra de nyeste settene";
   } else {
     const toks = nq.split(/\s+/).filter(Boolean);
     const scored = [];
@@ -777,8 +861,8 @@ function renderRow(c) {
   head.innerHTML =
     '<span class="cname"></span>' +
     '<span class="cprice">' + (!top ? "<small>Ingen markedspris</small>"
-      : overCap(top, "NM") ? "<b class='capped'>Ta kontakt</b><small>over " + capTxt() + "</small>"
-      : "<b>" + fmtKr(payout(top, "NM")) + "</b><small>" + MODE[mode].name + ", NM</small>") + "</span>" +
+      : overCap(top, "NM", c.lang) ? "<b class='capped'>Ta kontakt</b><small>over " + capTxt() + "</small>"
+      : "<b>" + fmtKr(payout(top, "NM", mode, c.lang)) + "</b><small>" + MODE[mode].name + ", NM</small>") + "</span>" +
     '<span class="csub"><span class="sname"></span> · <span class="num"></span><span class="rar"></span></span>';
   head.querySelector(".cname").textContent = c.name;
   head.querySelector(".sname").textContent = c.set.name;
@@ -846,16 +930,16 @@ function renderDetail(c) {
   const price = v && v[1];
   const calc = document.createElement("div");
   calc.className = "calc";
-  const capped = price && overCap(price, pick.cond);
+  const capped = price && overCap(price, pick.cond, c.lang);
   if (capped) {
     calc.classList.add("cap");
     calc.innerHTML = '<div class="steps"><span><b>Kort med utbetalingsverdi over ' + capTxt() + " kjøper vi etter avtale.</b></span>" +
       "<span>Send en e-post til <span class='mail'>kundeservice@pokenordic.no</span> med kortnavn, sett og tilstand, så gir vi deg et tilbud.</span></div>";
   } else if (price) {
-    const each = payout(price, pick.cond);
+    const each = payout(price, pick.cond, mode, c.lang);
     calc.innerHTML =
       '<div class="steps"><span>Markedspris ' + usd.format(price) + "</span>" +
-      "<span>× " + pct(MODE[mode].rate()) + " " + MODE[mode].name.toLowerCase() + (cur.factor !== 1 ? " × " + pct(cur.factor) + " (" + cur.code + ")" : " (NM)") + "</span>" +
+      "<span>× " + pct(rateFor(mode, c.lang)) + " " + MODE[mode].name.toLowerCase() + (cur.factor !== 1 ? " × " + pct(cur.factor) + " (" + cur.code + ")" : " (NM)") + "</span>" +
       "<span>× " + RATE.toLocaleString("nb-NO", { maximumFractionDigits: 4 }) + " NOK/USD</span></div>" +
       '<div class="out"><small>' + MODE[mode].each + "</small><b>" + fmtKr(each) + "</b></div>";
   } else {
@@ -897,7 +981,7 @@ function addToOffer(c, variant, cond, qty) {
   if (!$("donePanel").hidden) $("newOffer").click(); // nytt kort etter innsending starter et nytt tilbud
   const ex = offer.find((o) => o.id === c.id && o.variant === variant && o.cond === cond);
   if (ex) ex.qty = Math.min(999, ex.qty + qty);
-  else offer.push({ id: c.id, variant, cond, qty });
+  else offer.push({ id: c.id, variant, cond, qty, lang: c.lang });
   persist();
   renderOffer();
 }
@@ -929,9 +1013,9 @@ function lineInfo(o, m = mode) {
   if (!c) return null;
   const v = c.variants.find((x) => x[0] === o.variant);
   const usdP = (v && v[1]) || 0;
-  const each = payout(usdP, o.cond, m);
+  const each = payout(usdP, o.cond, m, c.lang);
   return {
-    bulk: false, c, name: c.name, set: c.set.name, number: c.number, variant: VARIANT_LABEL[o.variant] || o.variant, cond: o.cond,
+    bulk: false, c, name: c.name, set: c.set.name + (c.lang === "jp" ? " (japansk)" : ""), number: c.number, variant: VARIANT_LABEL[o.variant] || o.variant, cond: o.cond,
     qty: o.qty, qtyTxt: String(o.qty), eachTxt: fmtKr(each), cards: o.qty,
     usdP, each, sum: Math.round(each * o.qty * 100) / 100, tcgId: c.id
   };
@@ -1061,7 +1145,7 @@ function restore() {
     offer = (s.offer || []).filter((o) => {
       if (o.bulk) return bulkDef(o.bulk) && o.kg > 0;
       const L = lineInfo(o);
-      return L && !overCap(L.usdP, o.cond); // kort som har passert maksgrensen siden sist, tas ut
+      return L && !overCap(L.usdP, o.cond, L.c.lang); // kort som har passert maksgrensen siden sist, tas ut
     });
     if (s.mode === "trade" || s.mode === "cash") mode = s.mode;
     const f = s.f || { sellerName: s.name, sellerContact: s.contact, sellerNote: s.note };
@@ -1122,7 +1206,7 @@ function renderReceipt(d) {
     "<div class='tbl'><table><thead><tr><th>Varenr.</th><th>Kort</th><th>Tilstand</th><th class='num'>Antall</th><th class='num'>Pris/enhet</th><th class='num'>Sum</th></tr></thead>" +
     "<tbody>" + rows + "</tbody><tfoot><tr><td colspan='3'>" + esc(countTxt(d.count, d.kg)) + "</td><td colspan='3' class='num'>Kjøpssum " + fmtKr(d.total) + "</td></tr></tfoot></table></div>" +
     "<div class='terms'>" +
-      "<span><b>Oppgjør:</b> " + (mode === "trade" ? "Innbytte, tilgode i nettbutikken (" + pct(CONFIG.tradeRate) + " av markedspris)." : "Utbetaling (" + pct(CONFIG.cashRate) + " av markedspris).") + "</span>" +
+      "<span><b>Oppgjør:</b> " + (mode === "trade" ? "Innbytte, tilgode i nettbutikken (" + rateTxt(d) + " av markedspris)." : "Utbetaling (" + rateTxt(d) + " av markedspris).") + "</span>" +
       (hasBulk ? "<span>Bulk kjøpes som samlet parti etter vekt, med fast kilopris. Vekten kontrolleres ved mottak.</span>" : "") +
       "<span>Kortene er kjøpt fra privatperson og videreselges etter avansemetoden (merverdiavgiftsloven § 4-6). Kjøpsbevis etter bokføringsforskriften § 8-10-3.</span>" +
       "<span>Prisene er foreløpige til kortene er kontrollert. Endres antall eller pris ved kontrollen, lages et nytt kjøpsbevis før underskrift.</span>" +
@@ -1139,6 +1223,12 @@ function makeRef() {
   return r;
 }
 
+// «78 %», eller «78 % (japanske kort 70 %)» når tilbudet har japanske kort med egen sats
+function rateTxt(d) {
+  const en = rateFor(mode, "en"), jp = rateFor(mode, "jp");
+  const hasJp = d.lines.some(({ L }) => L.c && L.c.lang === "jp");
+  return pct(en) + (hasJp && jp !== en ? " (japanske kort " + pct(jp) + ")" : "");
+}
 function buildText(d) {
   const s = d.seller, note = s.note;
   const today = d.date.toLocaleDateString("nb-NO");
@@ -1148,7 +1238,7 @@ function buildText(d) {
   lines.push("Selger: " + s.name + " – " + s.contact);
   lines.push("Adresse: " + s.street + ", " + s.zip + " " + s.city);
   lines.push(s.minor ? "Under 18 år. Foresatt: " + s.guardianName + " – " + s.guardianContact : "18 år eller eldre");
-  lines.push("Ønsker: " + MODE[mode].name + " (" + pct(MODE[mode].rate()) + " av markedspris" + (mode === "trade" ? ", tilgode i nettbutikken" : "") + ")");
+  lines.push("Ønsker: " + MODE[mode].name + " (" + rateTxt(d) + " av markedspris" + (mode === "trade" ? ", tilgode i nettbutikken" : "") + ")");
   lines.push("");
   d.lines.forEach(({ o, L, nr }) => {
     if (L.bulk) {
@@ -1166,7 +1256,7 @@ function buildText(d) {
   lines.push("(" + MODE[other(mode)].name + " ville gitt " + fmtKr(offerTotal(other(mode))) + ")");
   if (note) { lines.push(""); lines.push("Kommentar: " + note); }
   lines.push("");
-  lines.push("Grunnlag: TCGPlayer Market Price " + new Date(DATA.updated).toLocaleDateString("nb-NO") + ", " + pct(MODE[mode].rate()) +
+  lines.push("Grunnlag: TCGPlayer Market Price " + new Date(DATA.updated).toLocaleDateString("nb-NO") + ", " + rateTxt(d) +
     " for NM, 1 USD = " + RATE.toLocaleString("nb-NO", { maximumFractionDigits: 4 }) + " NOK. Endelig pris avtales etter inspeksjon.");
   return lines.join("\n");
 }
@@ -1219,7 +1309,7 @@ $("sendForm").addEventListener("submit", async (e) => {
 function payload(d) {
   return {
     website: $("website").value,
-    ref: d.ref, modeName: MODE[mode].name, rate: MODE[mode].rate(), count: d.count, kg: d.kg, countText: countTxt(d.count, d.kg), total: d.total,
+    ref: d.ref, modeName: MODE[mode].name, rate: rateFor(mode, "en"), count: d.count, kg: d.kg, countText: countTxt(d.count, d.kg), total: d.total,
     needsApproval: needsApproval(d),
     altTotal: offerTotal(other(mode)), usdNok: RATE, pricesDate: new Date(DATA.updated).toLocaleDateString("nb-NO"),
     seller: d.seller,
@@ -1394,6 +1484,7 @@ function alertBox(msg) {
   const t = $("toast"); t.textContent = msg;
   $("receiptMsg").textContent = msg;
 }
+["langEn", "langJp"].forEach((id) => $(id).addEventListener("click", (e) => setLang(e.currentTarget.dataset.lang)));
 ["modeCash", "modeTrade"].forEach((id) => $(id).addEventListener("click", (e) => setMode(e.currentTarget.dataset.mode)));
 $("altSwitch").addEventListener("click", () => setMode(other(mode)));
 $("cashPct").textContent = pct(CONFIG.cashRate);

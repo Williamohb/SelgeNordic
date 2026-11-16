@@ -2,7 +2,7 @@
 
 index.html er skrevet uten <!doctype>/<head> (slik Claude-artifacts vil ha
 den). Her pakkes den inn i et fullstendig HTML-dokument, og cards.json og
-img/ og logo.webp kopieres ved siden av.
+cards-jp.json, img/, img-jp/ og logo.webp kopieres ved siden av.
 
 Kjør etter build_data.py og build_images.py:  python make_site.py
 """
@@ -26,9 +26,10 @@ def main():
         page = f.read()
     with open(os.path.join("_site", "index.html"), "w", encoding="utf-8") as f:
         f.write(HEAD + page + FOOT)
-    shutil.copy("cards.json", os.path.join("_site", "cards.json"))
-    shutil.copy("logo.webp", os.path.join("_site", "logo.webp"))
-    shutil.copytree("img", os.path.join("_site", "img"))
+    for f in ("cards.json", "cards-jp.json", "logo.webp"):
+        shutil.copy(f, os.path.join("_site", f))
+    for d in ("img", "img-jp"):
+        shutil.copytree(d, os.path.join("_site", d))
     # Produktbilder til Shopify-import (lages av lag_shopify_csv.py)
     if os.path.isdir("produktbilder"):
         shutil.copytree("produktbilder", os.path.join("_site", "produktbilder"))

@@ -1,7 +1,11 @@
-"""Bygger cards.json for innkjøpsportalen.
+"""Bygger kortdataene for innkjøpsportalen.
 
-Henter alle engelske Pokémon-kort med TCGPlayer-markedspris fra tcgcsv.com
-(daglig speil av TCGPlayer-data) og dagens USD/NOK-kurs fra Norges Bank.
+Henter alle Pokémon-kort med TCGPlayer-markedspris fra tcgcsv.com (daglig
+speil av TCGPlayer-data) og dagens USD/NOK-kurs fra Norges Bank.
+
+Lager to filer:
+  cards.json     engelske kort  (TCGPlayer-kategori 3)
+  cards-jp.json  japanske kort  (TCGPlayer-kategori 85)
 
 Kjør:  python build_data.py
 """
@@ -14,8 +18,13 @@ import urllib.request
 from concurrent.futures import ThreadPoolExecutor
 from datetime import datetime, timezone
 
-BASE = "https://tcgcsv.com/tcgplayer/3"  # 3 = Pokémon (engelsk)
 UA = {"User-Agent": "card-buylist-builder/1.0"}
+
+# (TCGPlayer-kategori, utfil, beskrivelse)
+CATEGORIES = [
+    (3, "cards.json", "engelske"),
+    (85, "cards-jp.json", "japanske"),
+]
 
 # Kortvarianter -> kort kode i datafila
 VARIANTS = {
@@ -48,13 +57,6 @@ def get_json(url):
     return json.loads(get_text(url))
 
 
-def fetch_group(g):
-    gid = g["groupId"]
-    products = get_json(f"{BASE}/{gid}/products")["results"]
-    prices = get_json(f"{BASE}/{gid}/prices")["results"]
-    return g, products, prices
-
-
 NUM_SUFFIX = re.compile(r" - [A-Za-z]*\d+[A-Za-z]*(?:/[A-Za-z0-9-]+)?(?=\s|$)")
 
 
@@ -77,17 +79,15 @@ def release_date(g):
     return p[:10]
 
 
-def main():
-    groups = get_json(f"{BASE}/groups")["results"]
-    updated = get_text("https://tcgcsv.com/last-updated.txt").strip()
+def build(category, outfile, label, updated, usd_nok, rate_date):
+    base = f"https://tcgcsv.com/tcgplayer/{category}"
+    groups = get_json(f"{base}/groups")["results"]
 
-    rate_csv = get_text(
-        "https://data.norges-bank.no/api/data/EXR/B.USD.NOK.SP"
-        "?lastNObservations=1&format=csv"
-    )
-    row = list(csv.DictReader(io.StringIO(rate_csv), delimiter=";"))[-1]
-    usd_nok = float(row["OBS_VALUE"])
-    rate_date = row["TIME_PERIOD"]
+    def fetch_group(g):
+        gid = g["groupId"]
+        products = get_json(f"{base}/{gid}/products")["results"]
+        prices = get_json(f"{base}/{gid}/prices")["results"]
+        return g, products, prices
 
     with ThreadPoolExecutor(max_workers=8) as pool:
         results = list(pool.map(fetch_group, groups))
@@ -139,9 +139,24 @@ def main():
         "sets": sets,
         "cards": cards,
     }
-    with open("cards.json", "w", encoding="utf-8") as f:
+    with open(outfile, "w", encoding="utf-8") as f:
         json.dump(out, f, ensure_ascii=False, separators=(",", ":"))
-    print(f"{len(cards)} kort i {len(sets)} sett, kurs {usd_nok} ({rate_date}), priser {updated}")
+    print(f"{outfile}: {len(cards)} {label} kort i {len(sets)} sett")
+
+
+def main():
+    updated = get_text("https://tcgcsv.com/last-updated.txt").strip()
+    rate_csv = get_text(
+        "https://data.norges-bank.no/api/data/EXR/B.USD.NOK.SP"
+        "?lastNObservations=1&format=csv"
+    )
+    row = list(csv.DictReader(io.StringIO(rate_csv), delimiter=";"))[-1]
+    usd_nok = float(row["OBS_VALUE"])
+    rate_date = row["TIME_PERIOD"]
+
+    for category, outfile, label in CATEGORIES:
+        build(category, outfile, label, updated, usd_nok, rate_date)
+    print(f"Kurs {usd_nok} ({rate_date}), priser {updated}")
 
 
 if __name__ == "__main__":

@@ -42,8 +42,11 @@ jobs:
       - name: Hent priser og valutakurs
         run: python build_data.py
 
-      - name: Lag bildeark
+      - name: Lag bildeark (engelske kort)
         run: python build_images.py card_img_cache
+
+      - name: Lag bildeark (japanske kort)
+        run: python build_images.py card_img_cache cards-jp.json img-jp
 
       - name: Sett sammen nettsiden
         run: python make_site.py

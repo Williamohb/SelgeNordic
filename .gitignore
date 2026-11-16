@@ -1,6 +1,8 @@
 # Genereres av byggeskriptene (lokalt og i GitHub Actions)
 cards.json
+cards-jp.json
 img/
+img-jp/
 _site/
 card_img_cache/
 __pycache__/
