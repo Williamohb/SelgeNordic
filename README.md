@@ -31,6 +31,21 @@ Til slutt lager de en tilbudstekst som de sender deg.
 - **Priser** oppdateres av seg selv hver natt kl. 06/07 norsk tid.
 - **Endringer i portalen:** rediger filene, og trykk i GitHub Desktop **Commit to main** og deretter **Push origin**. Siden publiseres på nytt innen et par minutter.
 
+## Nye kort i Shopify-butikken fra TCGplayer-lenker
+
+`lag_shopify_csv.py` lager en importfil for Shopify og 920×920-produktbilder med hvit kant.
+
+1. Lim inn TCGplayer-lenker i `nye_kort.txt`, én per linje. Bak lenken kan du skrive
+   `antall=2`, `pris=349`, `tilstand=LP` (NM, LP, MP, HP, DMG) og `variant=reverse` (normal, holo, reverse).
+2. Kjør `python lag_shopify_csv.py`.
+3. Bildene havner i `produktbilder/`. **Commit og push** med GitHub Desktop, og vent til
+   Actions-kjøringen er grønn. Shopify henter bildene fra `https://selg.pokenordic.no/produktbilder/…`.
+4. Shopify: **Produkter → Importer** og velg fila i `shopify-import/`.
+
+Pris = TCGPlayer-markedspris × USD/NOK × påslag (1,3), rundet opp til nærmeste …9 kr, minst 19 kr.
+Påslag, minstepris og trekk for dårligere tilstand står øverst i scriptet. Kolonnene følger
+`shopify-mal.csv` (overskriftsraden fra en Shopify-eksport).
+
 ## Automatisk innsending (Google Regneark + e-post)
 
 Når dette er satt opp, trykker selgeren **Send tilbudet**. Tilbudet lagres i et Google Regneark

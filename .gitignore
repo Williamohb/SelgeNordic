@@ -6,5 +6,9 @@ card_img_cache/
 __pycache__/
 .claude/
 
+# Lenkeliste og ferdige importfiler for lag_shopify_csv.py (bildene i produktbilder/ skal pushes)
+nye_kort.txt
+shopify-import/
+
 # Kode til Shopify-temaet (limes inn i Shopify, skal ikke ligge i det offentlige repoet)
 shopify/

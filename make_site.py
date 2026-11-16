@@ -29,6 +29,9 @@ def main():
     shutil.copy("cards.json", os.path.join("_site", "cards.json"))
     shutil.copy("logo.webp", os.path.join("_site", "logo.webp"))
     shutil.copytree("img", os.path.join("_site", "img"))
+    # Produktbilder til Shopify-import (lages av lag_shopify_csv.py)
+    if os.path.isdir("produktbilder"):
+        shutil.copytree("produktbilder", os.path.join("_site", "produktbilder"))
     print("Nettsiden er klar i _site/")
 
 
