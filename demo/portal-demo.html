@@ -1,0 +1,954 @@
+<title>PokéNordic demovideo</title>
+<meta name="claude:viewport-fit-sides" content="cover">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,600;12..96,800&family=Inter:wght@400;500;600&family=JetBrains+Mono:wght@500;700&display=swap">
+<style>
+/* Layout: siden er en videospiller. Scenen er 1280×720 og skaleres til bredden: et nettleservindu med portalen øverst, undertekst under.
+   Farger og fonter er de samme som i portalen (index.html). */
+:root {
+  --bg: #F2F6FC; --surface: #FFFFFF; --sunk: #E6EDF7; --ink: #0F1A2E; --muted: #56637A; --line: #D6DFEC;
+  --accent: #1E6FDA; --accent-ink: #FFFFFF; --mark: #D5E8FF; --mark-ink: #0B2E66; --good: #1F8A55; --warn: #B4561B;
+  --stage: #DCE6F4; --logo-filter: none;
+  --font-display: "Bricolage Grotesque", "Inter", system-ui, sans-serif;
+  --font-body: "Inter", system-ui, -apple-system, "Segoe UI", sans-serif;
+  --font-mono: "JetBrains Mono", ui-monospace, "Cascadia Mono", Consolas, monospace;
+  --radius: 10px;
+}
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) {
+    --bg: #0C1220; --surface: #141C2F; --sunk: #1B253B; --ink: #E6ECF7; --muted: #97A3BA; --line: #283552;
+    --accent: #5C9BF0; --accent-ink: #0C1220; --mark: #1E6FDA; --mark-ink: #FFFFFF; --good: #4CC38A; --warn: #F0965A;
+    --stage: #070B15; --logo-filter: brightness(1.35) saturate(1.1); color-scheme: dark;
+  }
+}
+:root[data-theme="dark"] {
+  --bg: #0C1220; --surface: #141C2F; --sunk: #1B253B; --ink: #E6ECF7; --muted: #97A3BA; --line: #283552;
+  --accent: #5C9BF0; --accent-ink: #0C1220; --mark: #1E6FDA; --mark-ink: #FFFFFF; --good: #4CC38A; --warn: #F0965A;
+  --stage: #070B15; --logo-filter: brightness(1.35) saturate(1.1); color-scheme: dark;
+}
+* { box-sizing: border-box; }
+[hidden] { display: none !important; }
+body { margin: 0; background: var(--bg); color: var(--ink); font-family: var(--font-body); font-size: 15px; line-height: 1.5; }
+
+/* ---------- Siden rundt spilleren ---------- */
+.shell {
+  max-width: 1080px; margin: 0 auto; display: grid; gap: 18px;
+  padding-left: max(16px, env(safe-area-inset-left, 0px)); padding-right: max(16px, env(safe-area-inset-right, 0px));
+  padding-block: 28px 48px;
+}
+.ph-head { display: grid; gap: 8px; }
+.ph-head img { height: 40px; width: auto; filter: var(--logo-filter); }
+.ph-head h1 { font-family: var(--font-display); font-weight: 800; font-size: clamp(26px, 4vw, 38px); line-height: 1.08; letter-spacing: -0.02em; margin: 6px 0 0; text-wrap: balance; }
+.ph-head p { margin: 0; color: var(--muted); max-width: 62ch; }
+.player { background: var(--surface); border: 1px solid var(--line); border-radius: 14px; overflow: hidden; box-shadow: 0 24px 50px -34px color-mix(in srgb, var(--ink) 50%, transparent); }
+.player { position: relative; }
+.sndpill { position: absolute; z-index: 2; top: 12px; right: 12px; display: inline-flex; align-items: center; gap: 7px; font: inherit; font-size: 13.5px; font-weight: 600; cursor: pointer; border: 0; border-radius: 999px; padding: 7px 13px; background: var(--ink); color: var(--bg); box-shadow: 0 6px 16px -8px color-mix(in srgb, var(--ink) 60%, transparent); }
+.sndpill:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+html.record .sndpill { display: none; }
+.viewport { position: relative; width: 100%; max-width: 100%; aspect-ratio: 16 / 9; overflow: hidden; background: var(--stage); }
+.controls { display: flex; align-items: center; gap: 12px; padding: 10px 14px; border-top: 1px solid var(--line); }
+.pbtn { flex: none; width: 40px; height: 40px; border-radius: 50%; border: 0; display: grid; place-items: center; cursor: pointer; background: var(--accent); color: var(--accent-ink); }
+.pbtn.ghost { background: transparent; color: var(--ink); border: 1.5px solid var(--line); }
+.pbtn:focus-visible, .bar:focus-visible, .chapters button:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+.bar { flex: 1; min-width: 0; height: 30px; position: relative; cursor: pointer; border-radius: 4px; }
+.bar .rail, .bar .fill { position: absolute; left: 0; top: 13px; height: 5px; border-radius: 3px; }
+.bar .rail { right: 0; background: var(--sunk); }
+.bar .fill { width: 0; background: var(--accent); }
+.bar .tick { position: absolute; top: 10px; width: 2px; height: 11px; margin-left: -1px; background: var(--surface); }
+.time { font-family: var(--font-mono); font-size: 12.5px; color: var(--muted); font-variant-numeric: tabular-nums; white-space: nowrap; }
+.chapters { display: flex; flex-wrap: wrap; gap: 6px; padding: 0 14px 14px; }
+.chapters button { font: inherit; font-size: 13px; border: 1.5px solid var(--line); background: var(--surface); color: var(--ink); padding: 5px 11px; border-radius: 999px; cursor: pointer; }
+.chapters button.on { border-color: var(--accent); background: color-mix(in srgb, var(--accent) 12%, var(--surface)); }
+.note { margin: 0; font-size: 13.5px; color: var(--muted); }
+.note a { color: var(--accent); }
+@media (max-width: 520px) { .time { display: none; } }
+
+/* Opptaksmodus (#record): bare scenen, 1:1 */
+html.record body { background: var(--stage); overflow: hidden; }
+html.record .shell { padding: 0; max-width: none; display: block; }
+html.record .ph-head, html.record .note, html.record .controls, html.record .chapters { display: none; }
+html.record .player { border: 0; border-radius: 0; box-shadow: none; }
+html.record .viewport { width: 1280px; height: 720px; aspect-ratio: auto; }
+
+/* ---------- Scenen ---------- */
+.stage { position: absolute; left: 0; top: 0; width: 1280px; height: 720px; transform-origin: 0 0; color: var(--ink); font-size: 15px; line-height: 1.5; background: var(--stage); overflow: hidden; }
+.win { position: absolute; left: 24px; top: 18px; width: 1232px; height: 614px; background: var(--bg); border: 1px solid var(--line); border-radius: 14px; overflow: hidden; box-shadow: 0 30px 60px -36px color-mix(in srgb, var(--ink) 60%, transparent); }
+.chrome { position: relative; height: 38px; display: flex; align-items: center; gap: 7px; padding: 0 14px; background: var(--sunk); border-bottom: 1px solid var(--line); }
+.chrome i { width: 11px; height: 11px; border-radius: 50%; background: var(--line); }
+.url { position: absolute; left: 50%; transform: translateX(-50%); display: flex; align-items: center; gap: 7px; font-family: var(--font-mono); font-size: 12.5px; color: var(--muted); background: var(--surface); border: 1px solid var(--line); padding: 3px 16px; border-radius: 999px; }
+.url b { color: var(--ink); font-weight: 500; }
+.bb { height: 58px; padding: 0 28px; display: flex; align-items: center; justify-content: space-between; border-bottom: 1px solid var(--line); }
+.bb img { height: 34px; width: auto; filter: var(--logo-filter); }
+.bb .nav { display: flex; align-items: center; gap: 16px; }
+.tag { font-size: 11.5px; font-weight: 600; letter-spacing: .08em; text-transform: uppercase; color: var(--muted); }
+.navlink { font-size: 13px; font-weight: 600; color: var(--accent); border: 1.5px solid color-mix(in srgb, var(--accent) 40%, var(--line)); padding: 4px 11px; border-radius: 999px; }
+.scroller { position: relative; height: 518px; overflow: hidden; }
+.page { position: relative; padding: 0 28px; }
+.top { display: grid; grid-template-columns: minmax(0, 1.1fr) minmax(0, 1fr); gap: 28px; align-items: end; padding: 22px 0 20px; }
+.top h1 { font-family: var(--font-display); font-weight: 800; font-size: 34px; line-height: 1.06; letter-spacing: -0.02em; margin: 0; text-wrap: balance; }
+.lede { color: var(--muted); margin: 8px 0 0; font-size: 14.5px; }
+.meta { font-family: var(--font-mono); font-size: 11.5px; color: var(--muted); margin-top: 10px; }
+.modes { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
+.mode { position: relative; background: var(--surface); border: 2px solid var(--line); border-radius: 12px; padding: 12px 14px 13px; display: grid; gap: 1px; transition: border-color .2s, background-color .2s, transform .12s; }
+.mode.hot { border-color: color-mix(in srgb, var(--accent) 50%, var(--line)); }
+.mode.on { border-color: var(--accent); background: color-mix(in srgb, var(--accent) 8%, var(--surface)); }
+.mode .k { font-size: 11.5px; font-weight: 600; letter-spacing: .08em; text-transform: uppercase; color: var(--muted); }
+.mode .v { font-family: var(--font-display); font-weight: 800; font-size: 30px; line-height: 1.05; letter-spacing: -0.02em; }
+.mode .d { font-size: 12.5px; color: var(--muted); }
+.mode .dot { position: absolute; top: 13px; right: 13px; width: 17px; height: 17px; border-radius: 50%; border: 2px solid var(--line); }
+.mode.on .dot { border-color: var(--accent); background: radial-gradient(circle, var(--accent) 0 45%, transparent 50%); }
+.mode .bonus { justify-self: start; margin-top: 5px; font-size: 11px; font-weight: 600; background: var(--mark); color: var(--mark-ink); padding: 1px 8px; border-radius: 999px; }
+.pgrid { display: grid; grid-template-columns: minmax(0, 1fr) 360px; gap: 24px; height: 518px; }
+.mcol { position: relative; overflow: hidden; min-width: 0; }
+.minner { position: relative; padding-top: 16px; padding-bottom: 40px; }
+.langs { display: inline-flex; gap: 4px; padding: 4px; margin-bottom: 10px; background: var(--sunk); border-radius: 999px; }
+.langs span { font-size: 13.5px; font-weight: 600; color: var(--muted); padding: 6px 14px; border-radius: 999px; }
+.langs span.on { background: var(--surface); color: var(--ink); box-shadow: 0 1px 3px color-mix(in srgb, var(--ink) 18%, transparent); }
+.sbox { position: relative; display: block; font-size: 16.5px; padding: 12px 16px 12px 46px; border-radius: var(--radius); border: 1.5px solid var(--line); background: var(--surface); min-height: 50px; white-space: nowrap; transition: border-color .15s, box-shadow .15s; }
+.sbox svg { position: absolute; left: 15px; top: 50%; transform: translateY(-50%); color: var(--muted); }
+.focus { border-color: var(--accent) !important; box-shadow: 0 0 0 3px color-mix(in srgb, var(--accent) 22%, transparent); }
+.ph { color: var(--muted); }
+.v:not(:empty) + .ph { display: none; }
+.focus > .v::after { content: ""; display: inline-block; width: 2px; height: 1.05em; margin-left: 1px; vertical-align: -0.15em; background: var(--accent); animation: blink 1s steps(1) infinite; }
+@keyframes blink { 50% { opacity: 0; } }
+.hint { font-size: 12.5px; color: var(--muted); margin: 7px 2px 0; }
+.hint code { font-family: var(--font-mono); font-size: 11.5px; background: var(--sunk); padding: 1px 5px; border-radius: 4px; }
+.listhead { display: flex; justify-content: space-between; align-items: baseline; gap: 12px; margin: 18px 2px 8px; }
+.listhead h2 { font-family: var(--font-display); font-weight: 600; font-size: 16.5px; margin: 0; }
+.listhead span { font-size: 12.5px; color: var(--muted); }
+.results { display: grid; gap: 6px; }
+.results.anim .row { animation: rowin .4s ease-out both; animation-delay: calc(var(--i) * 70ms); }
+@keyframes rowin { from { opacity: 0; transform: translateY(8px); } to { opacity: 1; transform: none; } }
+.row { background: var(--surface); border: 1px solid var(--line); border-radius: var(--radius); transition: transform .12s; }
+.head { display: grid; grid-template-columns: auto minmax(0, 1fr) auto; gap: 1px 14px; padding: 9px 14px 9px 10px; align-items: center; border-radius: var(--radius); }
+.row.hot .head { background: var(--sunk); }
+.row.open .head { border-bottom: 1px solid var(--line); border-radius: var(--radius) var(--radius) 0 0; }
+.thumb { position: relative; grid-row: 1 / span 2; width: 44px; aspect-ratio: 72 / 100; border-radius: 3px; background: var(--sunk) var(--img) center / cover no-repeat; box-shadow: 0 0 0 1px var(--line); overflow: hidden; }
+.thumb.kg { display: grid; place-items: center; font-family: var(--font-mono); font-size: 10px; font-weight: 700; color: var(--muted); }
+.cname { grid-column: 2; align-self: end; font-weight: 600; }
+.csub { grid-column: 2; align-self: start; font-size: 12.5px; color: var(--muted); }
+.csub .num { font-family: var(--font-mono); font-size: 11.5px; color: var(--ink); }
+.cprice { grid-row: 1 / span 2; grid-column: 3; text-align: right; font-family: var(--font-mono); font-variant-numeric: tabular-nums; }
+.cprice b { display: block; font-size: 14.5px; }
+.cprice b.capped { font-family: var(--font-body); font-size: 13.5px; color: var(--warn); }
+.cprice small { color: var(--muted); font-size: 11px; font-family: var(--font-body); }
+.detail { padding: 14px 14px 16px; display: grid; gap: 14px; }
+.detail.anim { animation: drop .3s ease-out; }
+@keyframes drop { from { opacity: .2; transform: translateY(-6px); } to { opacity: 1; transform: none; } }
+.fl { font-size: 11.5px; font-weight: 600; letter-spacing: .06em; text-transform: uppercase; color: var(--muted); margin-bottom: 6px; }
+.chip { display: inline-flex; gap: 8px; align-items: baseline; font-size: 13.5px; padding: 6px 11px; border-radius: 999px; border: 1.5px solid var(--accent); background: color-mix(in srgb, var(--accent) 12%, var(--surface)); }
+.chip small { font-family: var(--font-mono); font-size: 11.5px; color: var(--muted); }
+.conds { display: grid; grid-template-columns: repeat(5, minmax(0, 1fr)); gap: 6px; }
+.cond { padding: 8px 10px; border-radius: 8px; border: 1.5px solid var(--line); background: var(--surface); display: grid; gap: 0; transition: border-color .15s, background-color .15s, transform .12s; }
+.cond b { font-family: var(--font-mono); font-size: 13.5px; }
+.cond span { font-size: 11.5px; color: var(--muted); }
+.cond.on { border-color: var(--accent); background: color-mix(in srgb, var(--accent) 12%, var(--surface)); }
+.cdesc { font-size: 13px; color: var(--muted); margin: 8px 2px 0; }
+.cdesc b { color: var(--ink); font-weight: 600; }
+.calc { display: flex; align-items: flex-end; justify-content: space-between; gap: 14px; background: var(--sunk); border-radius: 8px; padding: 11px 14px; }
+.csteps { font-family: var(--font-mono); font-size: 12px; color: var(--muted); display: grid; gap: 1px; font-variant-numeric: tabular-nums; }
+.out { text-align: right; }
+.out small { display: block; font-size: 11.5px; color: var(--muted); }
+.out b { font-family: var(--font-mono); font-size: 21px; background: var(--mark); color: var(--mark-ink); padding: 0 6px; border-radius: 4px; font-variant-numeric: tabular-nums; }
+.actions { display: flex; gap: 10px; align-items: center; justify-content: space-between; }
+.qty { display: inline-flex; align-items: center; border: 1.5px solid var(--line); border-radius: 8px; background: var(--surface); font-family: var(--font-mono); }
+.qty i { font-style: normal; width: 34px; text-align: center; font-size: 17px; line-height: 34px; }
+.qty span { width: 30px; text-align: center; }
+.btn { display: inline-block; font-weight: 600; border-radius: 8px; padding: 9px 16px; border: 1.5px solid var(--accent); background: var(--accent); color: var(--accent-ink); transition: transform .12s, opacity .2s; }
+.btn.small { padding: 6px 10px; font-size: 13px; }
+.btn.off { opacity: .5; }
+.press { transform: scale(.97); }
+.bulk { margin-top: 26px; display: grid; gap: 10px; }
+.bulk h3 { font-family: var(--font-display); font-weight: 600; font-size: 16.5px; margin: 0; }
+.bulk p { margin: 0; color: var(--muted); font-size: 13px; }
+.bgrid { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
+.bcard { background: var(--surface); border: 1px solid var(--line); border-radius: var(--radius); padding: 11px 13px 13px; display: grid; gap: 9px; align-content: start; }
+.bcard h4 { margin: 0; font-size: 11.5px; font-weight: 600; letter-spacing: .08em; text-transform: uppercase; color: var(--muted); }
+.brow { display: grid; gap: 6px; }
+.brow + .brow { padding-top: 9px; border-top: 1px solid var(--line); }
+.bl { display: flex; justify-content: space-between; align-items: baseline; gap: 10px; }
+.bl span { font-weight: 600; font-size: 13.5px; }
+.bl b { font-family: var(--font-mono); font-size: 12px; font-weight: 500; color: var(--muted); }
+.badd { display: flex; gap: 6px; align-items: center; }
+.inp { display: block; min-height: 36px; padding: 7px 10px; border-radius: 8px; border: 1.5px solid var(--line); background: var(--surface); font-weight: 400; white-space: nowrap; overflow: hidden; transition: border-color .15s, box-shadow .15s; }
+.badd .inp { flex: 1; min-height: 32px; padding: 5px 8px; font-family: var(--font-mono); font-size: 13px; }
+
+/* Tilbudslappen */
+.slip { position: relative; overflow: hidden; margin: 16px 0; background: var(--surface); border: 1px solid var(--line); border-radius: var(--radius); box-shadow: 0 12px 30px -18px color-mix(in srgb, var(--ink) 35%, transparent); }
+.sinner { position: relative; }
+.slip-head { padding: 14px 18px 11px; border-bottom: 2px dashed var(--line); display: flex; justify-content: space-between; align-items: baseline; }
+.slip-head h2 { font-family: var(--font-display); font-weight: 800; font-size: 19px; margin: 0; }
+.slip-head span { font-family: var(--font-mono); font-size: 12px; color: var(--muted); }
+.items { list-style: none; margin: 0; padding: 2px 18px; }
+.item { display: grid; grid-template-columns: auto minmax(0, 1fr) auto; gap: 1px 12px; padding: 10px 0; border-bottom: 1px solid var(--line); }
+.item:last-child { border-bottom: 0; }
+.item.anim { animation: slidein .45s ease-out; }
+@keyframes slidein { from { opacity: 0; transform: translateX(24px); } to { opacity: 1; transform: none; } }
+.item .thumb { width: 30px; }
+.item .n { grid-column: 2; font-weight: 600; font-size: 13.5px; }
+.item .s { grid-column: 2; font-size: 12px; color: var(--muted); }
+.item .s i { font-style: normal; font-family: var(--font-mono); font-size: 11px; color: var(--ink); background: var(--sunk); padding: 0 5px; border-radius: 4px; }
+.item .p { grid-column: 3; grid-row: 1; text-align: right; font-family: var(--font-mono); font-size: 13.5px; font-variant-numeric: tabular-nums; }
+.slip-empty { padding: 18px 18px; color: var(--muted); font-size: 13.5px; }
+.slip-empty b { color: var(--ink); }
+.total { padding: 12px 18px; border-top: 2px dashed var(--line); display: flex; justify-content: space-between; align-items: baseline; }
+.total span { font-size: 12.5px; color: var(--muted); }
+.total b { font-family: var(--font-mono); font-size: 23px; font-variant-numeric: tabular-nums; }
+.form { padding: 4px 18px 18px; display: grid; gap: 9px; }
+.lbl { font-size: 12.5px; font-weight: 600; display: grid; gap: 3px; }
+.row2 { display: grid; grid-template-columns: 90px minmax(0, 1fr); gap: 8px; }
+.opts { display: grid; gap: 4px; }
+.opts .lg { font-size: 12.5px; font-weight: 600; }
+.opt { display: flex; gap: 8px; align-items: center; font-size: 13px; transition: transform .12s; }
+.rd, .cb { flex: none; width: 15px; height: 15px; border: 1.5px solid var(--muted); background: var(--surface); }
+.rd { border-radius: 50%; }
+.cb { border-radius: 3px; display: grid; place-items: center; }
+.opt.on .rd { border-color: var(--accent); background: radial-gradient(circle, var(--accent) 0 42%, var(--surface) 47%); }
+.opt.on .cb { border-color: var(--accent); background: var(--accent); }
+.opt.on .cb::after { content: ""; width: 7px; height: 4px; border: 2px solid var(--accent-ink); border-top: 0; border-right: 0; transform: rotate(-45deg) translate(1px, -1px); }
+.form .btn { text-align: center; }
+.fine { font-size: 11.5px; color: var(--muted); margin: 0; }
+.done { padding: 18px 18px 18px; border-top: 2px dashed var(--line); display: grid; gap: 8px; }
+.done-mark { width: 42px; height: 42px; border-radius: 50%; display: grid; place-items: center; background: var(--good); color: var(--surface); }
+.done.anim .done-mark { animation: pop .4s ease-out; }
+@keyframes pop { from { transform: scale(.5); opacity: .3; } to { transform: none; opacity: 1; } }
+.done h3 { font-family: var(--font-display); font-weight: 800; font-size: 22px; margin: 0; letter-spacing: -0.01em; }
+.done p { margin: 0; font-size: 13.5px; }
+.ref { color: var(--muted); }
+.ref b { font-family: var(--font-mono); font-size: 15px; background: var(--mark); color: var(--mark-ink); padding: 1px 6px; border-radius: 4px; }
+.done ol { margin: 2px 0 0; padding-left: 18px; display: grid; gap: 4px; font-size: 13px; }
+
+/* Peker, klikk og undertekst */
+.cursor { position: absolute; left: 0; top: 0; z-index: 20; pointer-events: none; opacity: 0; transition: opacity .25s; filter: drop-shadow(0 2px 3px rgba(0, 0, 0, .3)); }
+.cursor.show { opacity: 1; }
+.cursor svg { display: block; transform-origin: 3px 3px; transition: transform .12s; }
+.cursor.down svg { transform: scale(.85); }
+.ripple { position: absolute; z-index: 19; width: 46px; height: 46px; margin: -23px 0 0 -23px; border-radius: 50%; pointer-events: none; background: color-mix(in srgb, var(--accent) 35%, transparent); animation: rip .55s ease-out forwards; }
+@keyframes rip { from { transform: scale(.2); opacity: 1; } to { transform: scale(1.3); opacity: 0; } }
+.cap { position: absolute; left: 24px; right: 24px; top: 640px; height: 72px; display: flex; align-items: center; justify-content: center; gap: 14px; }
+.cap.in { animation: capin .35s ease-out; }
+@keyframes capin { from { opacity: 0; transform: translateY(6px); } to { opacity: 1; transform: none; } }
+.capchip { min-width: 36px; height: 36px; padding: 0 11px; border-radius: 999px; display: grid; place-items: center; background: var(--accent); color: var(--accent-ink); font-family: var(--font-mono); font-weight: 700; font-size: 15px; }
+.captext { font-family: var(--font-display); font-weight: 600; font-size: 25px; letter-spacing: -0.01em; }
+
+/* Tittelkort */
+.ov { position: absolute; inset: 0; z-index: 15; background: var(--stage); }
+.eyebrow { font-size: 13px; font-weight: 600; letter-spacing: .1em; text-transform: uppercase; color: var(--accent); }
+.intro { display: grid; grid-template-columns: minmax(0, 1.15fr) minmax(0, 1fr); align-items: center; gap: 40px; padding: 0 90px; }
+.intro-l { display: grid; gap: 14px; justify-items: start; }
+.intro-l img { height: 60px; width: auto; filter: var(--logo-filter); margin-bottom: 18px; }
+.intro h2 { font-family: var(--font-display); font-weight: 800; font-size: 66px; line-height: 1.0; letter-spacing: -0.03em; margin: 0; text-wrap: balance; }
+.intro p { margin: 4px 0 0; font-size: 21px; color: var(--muted); max-width: 30ch; }
+.fan { position: relative; height: 420px; }
+.fc { position: absolute; left: 50%; top: 50%; width: 200px; height: 278px; margin: -139px 0 0 -100px; border-radius: 10px; background: var(--sunk) var(--img) center / cover no-repeat; box-shadow: 0 24px 40px -22px rgba(10, 20, 40, .6); transform: translateX(var(--x)) rotate(var(--r)); }
+.pt { position: absolute; z-index: 1; right: -26px; bottom: 26px; font-family: var(--font-mono); font-weight: 700; font-size: 16px; background: var(--mark); color: var(--mark-ink); padding: 5px 10px; border-radius: 6px; box-shadow: 0 8px 18px -10px rgba(10, 20, 40, .5); opacity: 0; transform: scale(.6); transition: opacity .3s, transform .35s cubic-bezier(.3, 1.6, .5, 1); }
+.pt.on { opacity: 1; transform: none; }
+.fc:nth-child(1) .pt { left: -34px; right: auto; }
+.fc:nth-child(2) .pt { top: 30px; bottom: auto; right: -34px; }
+.flow { padding: 0 76px; display: grid; align-content: center; gap: 10px; }
+.flow h2 { font-family: var(--font-display); font-weight: 800; font-size: 58px; line-height: 1.04; letter-spacing: -0.02em; margin: 0; }
+.track { position: relative; height: 5px; border-radius: 3px; background: var(--line); margin: 34px 0 18px; }
+.track i { position: absolute; left: 0; top: 0; bottom: 0; width: 0; border-radius: 3px; background: var(--accent); }
+.fl5 { list-style: none; margin: 0; padding: 0; display: grid; grid-template-columns: repeat(5, minmax(0, 1fr)); gap: 14px; }
+.fs { background: var(--surface); border: 1px solid var(--line); border-radius: 12px; padding: 22px 18px 26px; min-height: 230px; display: grid; gap: 6px; align-content: start; opacity: .25; transform: translateY(12px); transition: opacity .45s, transform .45s; }
+.fs.on { opacity: 1; transform: none; }
+.fs .no { width: 34px; height: 34px; border-radius: 50%; display: grid; place-items: center; font-family: var(--font-mono); font-weight: 700; font-size: 15px; background: var(--mark); color: var(--mark-ink); margin-bottom: 6px; }
+.fs b { font-size: 20px; line-height: 1.2; }
+.fs span:last-child { font-size: 16px; color: var(--muted); }
+.item .s i { white-space: nowrap; }
+.fnote { margin: 30px 0 0; font-size: 19px; color: var(--muted); opacity: 0; transition: opacity .5s; }
+.fnote.on { opacity: 1; }
+.fnote b { color: var(--ink); }
+.outro { display: grid; place-content: center; justify-items: center; gap: 18px; text-align: center; }
+.outro img { height: 64px; width: auto; filter: var(--logo-filter); }
+.outro h2 { font-family: var(--font-display); font-weight: 800; font-size: 60px; line-height: 1.02; letter-spacing: -0.03em; margin: 8px 0 0; }
+.urlpill { font-family: var(--font-mono); font-weight: 700; font-size: 26px; background: var(--accent); color: var(--accent-ink); padding: 10px 26px; border-radius: 999px; }
+.outro p { margin: 0; font-size: 19px; color: var(--muted); }
+@media (prefers-reduced-motion: reduce) { .results.anim .row, .detail.anim, .item.anim, .done.anim .done-mark, .cap.in { animation: none; } }
+</style>
+
+<div class="shell">
+  <header class="ph-head">
+    <img src="logo.webp" alt="PokéNordic" width="116" height="40">
+    <h1>Slik selger du kort i innkjøpsportalen</h1>
+    <p>En kort demo av hele flyten: velg betaling, søk opp kortene, velg tilstand, legg til bulk og send inn tilbudet. Til slutt ser du hva som skjer etter innsending.</p>
+  </header>
+
+  <div class="player">
+    <div class="viewport" id="vp">
+      <div class="stage" id="stage">
+        <div class="win">
+          <div class="chrome"><i></i><i></i><i></i>
+            <span class="url"><svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" aria-hidden="true"><rect x="5" y="11" width="14" height="10" rx="2"></rect><path d="M8 11V8a4 4 0 0 1 8 0v3"></path></svg><b>selg.pokenordic.no</b></span>
+          </div>
+          <div class="bb">
+            <img src="logo.webp" alt="PokéNordic" width="98" height="34">
+            <div class="nav"><span class="tag">Innkjøp av Pokémon-kort</span><span class="navlink">Slik fungerer det</span></div>
+          </div>
+          <div class="scroller">
+            <div class="page" id="page">
+              <div class="top">
+                <div>
+                  <h1>Få penger eller nye produkter for Pokémon-kortene dine</h1>
+                  <p class="lede">Søk opp kortene, velg variant og tilstand, og se prisen med en gang.</p>
+                  <div class="meta">TCGPlayer-priser per 15. nov. 2026 · 1 USD = 9,6005 NOK</div>
+                </div>
+                <div class="modes">
+                  <div class="mode on" id="mCash"><span class="dot"></span><span class="k">Utbetaling</span><span class="v">78 %</span><span class="d">av markedspris, utbetalt til deg</span></div>
+                  <div class="mode" id="mTrade"><span class="dot"></span><span class="k">Innbytte</span><span class="v">83 %</span><span class="d">av markedspris som tilgode i nettbutikken</span><span class="bonus">+5 % ekstra</span></div>
+                </div>
+              </div>
+              <div class="pgrid" id="pgrid">
+                <div class="mcol" id="mcol">
+                  <div class="minner" id="minner">
+                    <div class="langs"><span class="on">Engelske kort</span><span>Japanske kort</span></div>
+                    <div class="sbox" id="sbox"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true"><circle cx="11" cy="11" r="7"></circle><path d="m20 20-3.5-3.5"></path></svg><span class="v" id="qv"></span><span class="ph">Kortnavn, nummer eller sett …</span></div>
+                    <p class="hint">Eksempler: <code>charizard</code> · <code>pikachu 25/102</code> · <code>mew ex 151</code></p>
+                    <div class="listhead"><h2 id="listTitle">Populære kort</h2><span id="listCount"></span></div>
+                    <div class="results" id="results"></div>
+                    <section class="bulk" id="bulkSec">
+                      <h3>Bulk etter vekt</h3>
+                      <p>Har du mange vanlige kort? Vei dem på kjøkkenvekta og legg dem til. Vi betaler fast pris per kilo.</p>
+                      <div class="bgrid">
+                        <div class="bcard"><h4>Sword &amp; Shield og nyere</h4>
+                          <div class="brow"><div class="bl"><span>Non-holo</span><b>70 kr/kg</b></div><div class="badd"><span class="inp" id="kgBox"><span class="v" id="kgv"></span><span class="ph">kg</span></span><span class="btn small" id="kgAdd">Legg til</span></div></div>
+                          <div class="brow"><div class="bl"><span>Reverse/holofoil</span><b>230 kr/kg</b></div><div class="badd"><span class="inp"><span class="v"></span><span class="ph">kg</span></span><span class="btn small">Legg til</span></div></div>
+                        </div>
+                        <div class="bcard"><h4>Sun &amp; Moon og XY</h4>
+                          <div class="brow"><div class="bl"><span>Non-holo</span><b>110 kr/kg</b></div><div class="badd"><span class="inp"><span class="v"></span><span class="ph">kg</span></span><span class="btn small">Legg til</span></div></div>
+                          <div class="brow"><div class="bl"><span>Reverse/holofoil</span><b>450 kr/kg</b></div><div class="badd"><span class="inp"><span class="v"></span><span class="ph">kg</span></span><span class="btn small">Legg til</span></div></div>
+                        </div>
+                      </div>
+                    </section>
+                  </div>
+                </div>
+                <aside class="slip" id="slip">
+                  <div class="sinner" id="sinner">
+                    <div class="slip-head"><h2>Ditt tilbud</h2><span id="slipCount">0 kort</span></div>
+                    <ul class="items" id="items"></ul>
+                    <div class="slip-empty" id="slipEmpty">Ingen kort ennå. Søk opp et kort, velg tilstand og trykk <b>Legg til</b>.</div>
+                    <div class="total"><span>Estimert utbetaling</span><b id="total">0,00 kr</b></div>
+                    <div class="form" id="sendForm">
+                      <label class="lbl">Navnet ditt<span class="inp" id="fName"><span class="v"></span><span class="ph">Ola Nordmann</span></span></label>
+                      <label class="lbl">E-post<span class="inp" id="fMail"><span class="v"></span><span class="ph">ola@eksempel.no</span></span></label>
+                      <label class="lbl">Adresse<span class="inp" id="fStreet"><span class="v"></span><span class="ph">Storgata 1</span></span></label>
+                      <div class="row2">
+                        <label class="lbl">Postnr.<span class="inp" id="fZip"><span class="v"></span><span class="ph">0150</span></span></label>
+                        <label class="lbl">Poststed<span class="inp" id="fCity"><span class="v"></span><span class="ph">Oslo</span></span></label>
+                      </div>
+                      <div class="opts"><span class="lg">Alder</span>
+                        <span class="opt" id="rAdult"><i class="rd"></i>Jeg er 18 år eller eldre</span>
+                        <span class="opt"><i class="rd"></i>Jeg er under 18 år</span>
+                      </div>
+                      <span class="opt" id="cOwn"><i class="cb"></i>Kortene er mine, og opplysningene over stemmer.</span>
+                      <span class="btn off" id="sendBtn">Send tilbudet</span>
+                      <p class="fine">Lista lagres bare i nettleseren din til du sender den.</p>
+                    </div>
+                    <div class="done" id="done" hidden>
+                      <div class="done-mark"><svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M5 12.5l4.5 4.5L19 7.5"></path></svg></div>
+                      <h3>Tilbudet er innsendt</h3>
+                      <p class="ref">Referanse <b>#K7Q4M</b></p>
+                      <ol>
+                        <li>Skriv navn og <b>#K7Q4M</b> på en lapp, og legg den i pakken.</li>
+                        <li>Send kortene med Posten, gjerne med sporing.</li>
+                        <li>Du får endelig tilbud på e-post innen 1–3 virkedager etter at vi har fått kortene.</li>
+                      </ol>
+                    </div>
+                  </div>
+                </aside>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <div class="cap" id="cap"><span class="capchip" id="capChip" hidden></span><span class="captext" id="capText"></span></div>
+
+        <div class="ov intro" id="ovIntro">
+          <div class="intro-l">
+            <img src="logo.webp" alt="PokéNordic" width="174" height="60">
+            <span class="eyebrow">Innkjøpsportalen · demo</span>
+            <h2>Slik selger du Pokémon-kort til PokéNordic</h2>
+            <p>Søk opp kortene, se prisen og send tilbudet. Det tar et par minutter.</p>
+          </div>
+          <div class="fan">
+            <div class="fc" style="--img:url(cards/517051-l.webp);--r:-15deg;--x:-125px"><span class="pt" id="pt0"></span></div>
+            <div class="fc" style="--img:url(cards/590027-l.webp);--r:13deg;--x:125px"><span class="pt" id="pt2"></span></div>
+            <div class="fc" style="--img:url(cards/517045-l.webp);--r:0deg;--x:0px"><span class="pt" id="pt1"></span></div>
+          </div>
+        </div>
+
+        <div class="ov flow" id="ovFlow" hidden>
+          <span class="eyebrow">Etter at du har sendt tilbudet</span>
+          <h2>Slik går salget videre</h2>
+          <div class="track"><i id="trackFill"></i></div>
+          <ol class="fl5">
+            <li class="fs"><span class="no">1</span><b>Du sender tilbudet</b><span>Du får en referanse med en gang.</span></li>
+            <li class="fs"><span class="no">2</span><b>Du sender kortene</b><span>Pakk dem godt, legg ved referansen og send med Posten.</span></li>
+            <li class="fs"><span class="no">3</span><b>Vi kontrollerer kortene</b><span>Endelig tilbud og kjøpsbevis på e-post innen 1–3 virkedager.</span></li>
+            <li class="fs"><span class="no">4</span><b>Du godtar eller avslår</b><span>Trykk på lenken i e-posten og skriv navnet ditt.</span></li>
+            <li class="fs"><span class="no">5</span><b>Du får betalt</b><span>Vipps, bank eller tilgode i nettbutikken. Utbetalingen starter samme dag.</span></li>
+          </ol>
+          <p class="fnote" id="fnote"><b>Gratis og uforpliktende.</b> Avslår du, sender vi kortene tilbake, og du betaler returfrakten.</p>
+        </div>
+
+        <div class="ov outro" id="ovOut" hidden>
+          <img src="logo.webp" alt="PokéNordic" width="186" height="64">
+          <h2>Klar til å selge kortene dine?</h2>
+          <span class="urlpill">selg.pokenordic.no</span>
+          <p>Prisene følger TCGPlayer-markedet og oppdateres hver dag.</p>
+        </div>
+
+        <div class="cursor" id="cursor"><svg width="26" height="30" viewBox="0 0 26 30" aria-hidden="true"><path d="M3 3 L3 24 L8.6 18.8 L12.4 27.2 L16.2 25.5 L12.5 17.3 L20 17 Z" fill="#FFFFFF" stroke="#0F1A2E" stroke-width="2" stroke-linejoin="round"></path></svg></div>
+      </div>
+    </div>
+    <button type="button" class="sndpill" id="sndPill"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 9h4l5-4v14l-5-4H4z"></path><path d="M16.5 8.5a5 5 0 0 1 0 7M19.5 5.5a9 9 0 0 1 0 13"></path></svg>Slå på lyd</button>
+    <div class="controls">
+      <button type="button" class="pbtn" id="playBtn" aria-label="Pause">
+        <svg id="icPause" width="16" height="16" viewBox="0 0 16 16" aria-hidden="true"><rect x="3" y="2" width="3.5" height="12" rx="1" fill="currentColor"></rect><rect x="9.5" y="2" width="3.5" height="12" rx="1" fill="currentColor"></rect></svg>
+        <svg id="icPlay" width="16" height="16" viewBox="0 0 16 16" aria-hidden="true" hidden><path d="M4 2.5v11l9.5-5.5z" fill="currentColor"></path></svg>
+      </button>
+      <div class="bar" id="bar" role="slider" tabindex="0" aria-label="Hvor i videoen" aria-valuemin="0"><span class="rail"></span><span class="fill" id="fill"></span></div>
+      <span class="time" id="time">0:00</span>
+      <button type="button" class="pbtn ghost" id="sndBtn" aria-label="Slå på lyd" aria-pressed="false">
+        <svg id="icSndOff" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 9h4l5-4v14l-5-4H4z"></path><path d="m17 9 5 6M22 9l-5 6"></path></svg>
+        <svg id="icSndOn" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" hidden><path d="M4 9h4l5-4v14l-5-4H4z"></path><path d="M16.5 8.5a5 5 0 0 1 0 7M19.5 5.5a9 9 0 0 1 0 13"></path></svg>
+      </button>
+      <button type="button" class="pbtn ghost" id="restartBtn" aria-label="Start på nytt"><svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M3 12a9 9 0 1 0 3-6.7"></path><path d="M3 4v5h5"></path></svg></button>
+    </div>
+    <div class="chapters" id="chapters"></div>
+  </div>
+
+  <p class="note">Prisene i demoen er fra 15. november 2026, og selgeren er oppdiktet. Dagens priser finner du på <a href="https://selg.pokenordic.no">selg.pokenordic.no</a>.</p>
+</div>
+
+<script>
+const $ = (id) => document.getElementById(id);
+// #record: bare scenen, 1:1. #render: som #record, men klokka styres bilde for bilde utenfra (__step), for opptak med lyd i nøyaktig synk.
+const MANUAL = location.hash === "#render";
+const REC = location.hash === "#record" || MANUAL;
+if (REC) { document.documentElement.classList.add("record"); document.documentElement.dataset.theme = "light"; }
+const stage = $("stage"), vp = $("vp");
+let scale = 1;
+function fit() { scale = REC ? 1 : vp.clientWidth / 1280; stage.style.transform = "scale(" + scale + ")"; }
+new ResizeObserver(fit).observe(vp);
+
+/* ---------- Data (eksempelpriser) ---------- */
+const nf = new Intl.NumberFormat("nb-NO", { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+const kr = (v) => nf.format(v) + " kr";
+const RATE = 9.6005, CASH = 0.78, CAP = 5000;
+const pay = (usd, f = 1) => Math.round(usd * CASH * f * RATE * 100) / 100;
+const CONDS = [
+  ["NM", "Near Mint", 1.00, "Som nytt. Skarpe hjørner, ingen riper."],
+  ["LP", "Lightly Played", 0.85, "Litt slitasje: små hvite prikker langs kantene eller lett slitte hjørner."],
+  ["MP", "Moderately Played", 0.70, "Tydelig slitasje: hvite kanter, slitte hjørner eller riper på forsiden."],
+  ["HP", "Heavily Played", 0.50, "Kraftig slitasje: mye hvitt på kantene, bretter eller krøll."],
+  ["DMG", "Damaged", 0.30, "Skadet: rifter, vannskade, store bretter eller skrift."]
+];
+// Kort og TCGPlayer-priser fra portalens cards.json (15. nov. 2026); bildene er klippet fra portalens bildeark
+const S151 = "SV: Scarlet & Violet 151";
+const FEATURED = [
+  { id: 590027, n: "Pikachu ex", set: "SV08: Surging Sparks", num: "238/191", r: "Special Illustration Rare", usd: 221.91 },
+  { id: 610516, n: "Umbreon ex", set: "SV: Prismatic Evolutions", num: "161/131", r: "Special Illustration Rare", usd: 1186.84 },
+  { id: 550232, n: "Eevee", set: "SV06: Twilight Masquerade", num: "188/167", r: "Illustration Rare", usd: 70.82 },
+  { id: 502549, n: "Squirtle", set: S151, num: "170/165", r: "Illustration Rare", usd: 77.24 }
+];
+const CHAR = [
+  { id: 517045, n: "Charizard ex", set: S151, num: "199/165", r: "Special Illustration Rare", usd: 287.60 },
+  { id: 509980, n: "Charizard ex", set: "SV03: Obsidian Flames", num: "223/197", r: "Special Illustration Rare", usd: 83.68 },
+  { id: 42382, n: "Charizard", set: "Base Set", num: "004/102", r: "Holo Rare", usd: 987.13 },
+  { id: 502558, n: "Charizard ex", set: S151, num: "006/165", r: "Double Rare", usd: 8.47 }
+];
+const MEW = [
+  { id: 517051, n: "Mew ex", set: S151, num: "205/165", r: "Hyper Rare", usd: 23.74 },
+  { id: 517027, n: "Mew ex", set: S151, num: "193/165", r: "Ultra Rare", usd: 30.16 },
+  { id: 516566, n: "Mew ex", set: S151, num: "151/165", r: "Double Rare", usd: 6.79 }
+];
+const img = (id) => "--img:url(cards/" + id + ".webp)";
+const ITEMS = [
+  { id: 517045, n: "Charizard ex", s: "MEW · 199/165 · <i>LP</i> · Holo", p: pay(287.60, 0.85) },
+  { id: 517051, n: "Mew ex", s: "MEW · 205/165 · <i>NM</i> · Holo", p: pay(23.74) },
+  { kg: true, n: "Bulk: Non-holo", s: "Sword &amp; Shield+ · <i>1,5 kg</i>", p: 105.00 }
+];
+const COUNTS = ["1 kort", "2 kort", "2 kort + 1,5 kg bulk"];
+const sumTo = (n) => Math.round(ITEMS.slice(0, n).reduce((a, b) => a + b.p, 0) * 100) / 100;
+const FIELDS = [["fName", "Emma Hansen"], ["fMail", "emma@epost.no"], ["fStreet", "Kirkegata 12"], ["fZip", "7011"], ["fCity", "Trondheim"]];
+
+/* ---------- Klokke: alt animeres mot en egen tidslinje, så pause og kapitler virker ---------- */
+const ABORT = Symbol("abort");
+const clock = { t: 0, playing: false, last: performance.now() };
+let gen = 0, waiters = [], tickers = new Set(), ended = false;
+function frame(now) {
+  const dt = Math.min(100, now - clock.last); clock.last = now;
+  if (clock.playing && !MANUAL) clock.t += dt;
+  for (const f of [...tickers]) f(clock.t);
+  if (waiters.length) {
+    const due = waiters.filter((w) => clock.t >= w.at);
+    waiters = waiters.filter((w) => clock.t < w.at);
+    due.forEach((w) => w.go());
+  }
+  ui();
+  requestAnimationFrame(frame);
+}
+function until(at) { const g = gen; return new Promise((res, rej) => waiters.push({ at, go: () => (g === gen ? res() : rej(ABORT)) })); }
+const wait = (ms) => until(clock.t + ms);
+const ease = (p) => (p < 0.5 ? 2 * p * p : 1 - Math.pow(-2 * p + 2, 2) / 2);
+const linear = (p) => p;
+function tween(ms, fn, e = ease) {
+  const g = gen, t0 = clock.t;
+  return new Promise((res, rej) => {
+    const tick = (t) => {
+      if (g !== gen) { tickers.delete(tick); return rej(ABORT); }
+      const p = Math.min(1, Math.max(0, (t - t0) / ms));
+      fn(e(p));
+      if (p >= 1) { tickers.delete(tick); res(); }
+    };
+    tickers.add(tick); tick(clock.t);
+  });
+}
+const bg = (p) => p.catch(() => {});
+// Bilde-for-bilde-styring (#render): flytter klokka ms fram, lar alle ventende steg kjøre, og setter CSS-animasjoner til samme tid
+function pump() {
+  for (const f of [...tickers]) f(clock.t);
+  const due = waiters.filter((w) => clock.t >= w.at);
+  waiters = waiters.filter((w) => clock.t < w.at);
+  due.forEach((w) => w.go());
+  return due.length;
+}
+window.__step = async (ms) => {
+  clock.t += ms;
+  for (let k = 0; k < 8; k++) { const n = pump(); await new Promise((r) => setTimeout(r, 0)); if (!n) break; }
+  for (const f of [...tickers]) f(clock.t);
+  for (const a of document.getAnimations()) {
+    if (a._s === undefined) { a._s = clock.t; a.pause(); }
+    a.currentTime = Math.max(0, clock.t - a._s);
+  }
+  ui();
+  return window.demoDone === true;
+};
+
+/* ---------- Lyd: syntetiske lydeffekter med Web Audio. Samme lyder brukes til lydsporet i videofilen (renderSfx). ---------- */
+const SFX_LOG = [];
+let actx = null, master = null, soundOn = false;
+function rng(seed) { let s = seed >>> 0; return () => ((s = (s * 1664525 + 1013904223) >>> 0) / 4294967296); }
+function noiseBuf(c) {
+  if (c._noise) return c._noise;
+  const r = rng(7), b = c.createBuffer(1, c.sampleRate, c.sampleRate), d = b.getChannelData(0);
+  for (let i = 0; i < d.length; i++) d[i] = r() * 2 - 1;
+  return (c._noise = b);
+}
+function env(g, t, a, peak, d) { g.gain.setValueAtTime(0.0001, t); g.gain.linearRampToValueAtTime(peak, t + a); g.gain.exponentialRampToValueAtTime(0.0001, t + a + d); }
+function tone(c, out, t, { f, f2, type = "sine", a = 0.004, peak = 0.2, d = 0.2 }) {
+  const o = c.createOscillator(), g = c.createGain();
+  o.type = type; o.frequency.setValueAtTime(f, t);
+  if (f2) o.frequency.exponentialRampToValueAtTime(f2, t + a + d * 0.6);
+  env(g, t, a, peak, d); o.connect(g).connect(out); o.start(t); o.stop(t + a + d + 0.05);
+}
+function noise(c, out, t, { a = 0.002, peak = 0.2, d = 0.03, f = 3000, f2, q = 1 }) {
+  const s = c.createBufferSource(), bq = c.createBiquadFilter(), g = c.createGain();
+  s.buffer = noiseBuf(c); bq.type = "bandpass"; bq.Q.value = q; bq.frequency.setValueAtTime(f, t);
+  if (f2) bq.frequency.exponentialRampToValueAtTime(f2, t + a + d);
+  env(g, t, a, peak, d); s.connect(bq).connect(g).connect(out); s.start(t, (t * 7.3) % 0.5); s.stop(t + a + d + 0.05);
+}
+const NOTES = [523.25, 587.33, 659.25, 783.99, 1046.5];
+const SOUNDS = {
+  click: (c, o, t) => { noise(c, o, t, { f: 2600, q: 0.8, peak: 0.35, d: 0.035 }); tone(c, o, t, { f: 1500, f2: 700, peak: 0.1, d: 0.05 }); },
+  key: (c, o, t, v) => { noise(c, o, t, { f: 3400 + ((v || 0) % 4) * 450, q: 2, peak: 0.13, d: 0.022 }); },
+  whoosh: (c, o, t) => { noise(c, o, t, { a: 0.16, f: 350, f2: 1800, q: 0.9, peak: 0.09, d: 0.3 }); },
+  pop: (c, o, t) => { tone(c, o, t, { f: 420, f2: 1050, peak: 0.26, d: 0.13 }); },
+  coin: (c, o, t) => { tone(c, o, t, { f: 1567.98, peak: 0.12, d: 0.35 }); tone(c, o, t + 0.075, { f: 2093, peak: 0.12, d: 0.5 }); tone(c, o, t + 0.075, { f: 4186, peak: 0.03, d: 0.25 }); },
+  success: (c, o, t) => { [523.25, 659.25, 783.99, 1046.5].forEach((f, i) => { tone(c, o, t + i * 0.09, { f, type: "triangle", peak: 0.15, d: 0.6 }); tone(c, o, t + i * 0.09, { f: f * 2, peak: 0.04, d: 0.4 }); }); },
+  step: (c, o, t, v) => { const f = NOTES[(v || 0) % 5]; tone(c, o, t, { f, type: "triangle", peak: 0.16, d: 0.35 }); tone(c, o, t, { f: f * 2, peak: 0.05, d: 0.2 }); },
+  swell: (c, o, t) => { [261.63, 329.63, 392, 523.25].forEach((f) => tone(c, o, t, { f, a: 0.35, peak: 0.045, d: 1.6 })); }
+};
+function mkMaster(c) { const g = c.createGain(), comp = c.createDynamicsCompressor(); g.gain.value = 0.9; g.connect(comp).connect(c.destination); return g; }
+function sfx(n, v) {
+  if (REC) SFX_LOG.push({ n, v, t: clock.t, w: performance.now() });
+  if (soundOn && actx && clock.playing) { try { SOUNDS[n](actx, master, actx.currentTime + 0.01, v); } catch (e) {} }
+}
+// Lager lydsporet til videofilen: events = [{n, v, at (sekunder)}]; svarer med 16-bit stereo PCM som base64
+window.renderSfx = async (events, seconds, sr = 48000) => {
+  const c = new OfflineAudioContext(2, Math.ceil(seconds * sr), sr), out = mkMaster(c);
+  events.forEach((e) => { if (e.at >= 0) SOUNDS[e.n](c, out, e.at, e.v); });
+  const buf = await c.startRendering(), L = buf.getChannelData(0), R = buf.getChannelData(1);
+  const pcm = new Int16Array(L.length * 2);
+  for (let i = 0; i < L.length; i++) { pcm[2 * i] = Math.max(-1, Math.min(1, L[i])) * 32767; pcm[2 * i + 1] = Math.max(-1, Math.min(1, R[i])) * 32767; }
+  const bytes = new Uint8Array(pcm.buffer); let s = "";
+  for (let i = 0; i < bytes.length; i += 0x8000) s += String.fromCharCode.apply(null, bytes.subarray(i, i + 0x8000));
+  return btoa(s);
+};
+function setSound(on) {
+  if (on) {
+    try {
+      if (!actx) { actx = new (window.AudioContext || window.webkitAudioContext)(); master = mkMaster(actx); }
+      actx.resume();
+    } catch (e) { on = false; }
+  }
+  soundOn = on;
+  $("sndBtn").setAttribute("aria-pressed", on ? "true" : "false");
+  $("sndBtn").setAttribute("aria-label", on ? "Slå av lyd" : "Slå på lyd");
+  $("icSndOn").toggleAttribute("hidden", !on); $("icSndOff").toggleAttribute("hidden", on);
+  $("sndPill").hidden = on;
+}
+
+/* ---------- Hjelpere ---------- */
+const cursor = $("cursor"), cp = { x: 760, y: 430 };
+function placeC() { cursor.style.transform = "translate(" + cp.x + "px," + cp.y + "px)"; }
+function showC(on) { cursor.classList.toggle("show", on); }
+function pos(el, ax = 0.5, ay = 0.5) {
+  const r = el.getBoundingClientRect(), s = stage.getBoundingClientRect();
+  return { x: (r.left - s.left + r.width * ax) / scale, y: (r.top - s.top + r.height * ay) / scale };
+}
+function moveTo(el, ms = 650, ax = 0.5, ay = 0.5) {
+  const p = pos(el, ax, ay), a = { x: cp.x, y: cp.y };
+  return tween(ms, (k) => { cp.x = a.x + (p.x - a.x) * k; cp.y = a.y + (p.y - a.y) * k; placeC(); });
+}
+async function click(el) {
+  sfx("click");
+  cursor.classList.add("down");
+  const r = document.createElement("span"); r.className = "ripple"; r.style.left = cp.x + "px"; r.style.top = cp.y + "px";
+  stage.appendChild(r); bg(wait(700).then(() => r.remove()));
+  if (el) el.classList.add("press");
+  await wait(170);
+  cursor.classList.remove("down"); if (el) el.classList.remove("press");
+}
+async function type(el, text, ms = 80) {
+  for (let i = 0; i < text.length; i++) { el.textContent += text[i]; sfx("key", i); await wait(ms + ((i * 7) % 3) * 14); }
+}
+function setY(el, v) { el._y = v; el.style.transform = "translateY(" + -v + "px)"; }
+const getY = (el) => el._y || 0;
+function scrollTo(el, v, ms = 600) { const a = getY(el); return tween(ms, (k) => setY(el, a + (v - a) * k)); }
+function offTop(el, anc) { let t = 0; while (el && el !== anc) { t += el.offsetTop; el = el.offsetParent; } return t; }
+// Ruller en kolonne (inner) slik at el er synlig i et vindu med høyde viewH
+function revealY(inner, el, viewH, pad = 12) {
+  const top = offTop(el, inner), bot = top + el.offsetHeight, y = getY(inner);
+  if (bot > y + viewH - pad) return bot - viewH + pad;
+  if (top < y + pad) return Math.max(0, top - pad);
+  return y;
+}
+async function reveal(inner, el, viewH, ms = 350) { const v = revealY(inner, el, viewH); if (v !== getY(inner)) await scrollTo(inner, v, ms); }
+function setOv(el, o) { el.style.opacity = o; el.hidden = o === 0; }
+async function fade(el, to, ms = 450) {
+  el.hidden = false;
+  const a = el.style.opacity === "" ? 1 : +el.style.opacity;
+  await tween(ms, (k) => { el.style.opacity = a + (to - a) * k; });
+  if (to === 0) el.hidden = true;
+}
+function cap(chip, text) {
+  const c = $("cap");
+  $("capChip").textContent = chip || ""; $("capChip").hidden = !chip; $("capText").textContent = text || "";
+  c.classList.remove("in"); void c.offsetWidth; if (text) c.classList.add("in");
+}
+
+/* ---------- Portalens deler ---------- */
+function rowHTML(c, i) {
+  const p = pay(c.usd);
+  const price = p > CAP ? '<b class="capped">Etter avtale</b><small>over 5 000 kr</small>' : "<b>" + kr(p) + "</b><small>NM · utbetaling</small>";
+  return '<div class="row" style="--i:' + i + '"><div class="head"><span class="thumb" style="' + img(c.id) + '"></span>' +
+    '<span class="cname">' + c.n + '</span><span class="csub">' + c.set + ' · <span class="num">' + c.num + "</span> · " + c.r + "</span>" +
+    '<span class="cprice">' + price + "</span></div></div>";
+}
+function renderRows(list, title, count, anim) {
+  $("listTitle").textContent = title; $("listCount").textContent = count;
+  const r = $("results"); r.classList.toggle("anim", !!anim); r.innerHTML = list.map(rowHTML).join("");
+}
+function detailHTML(c, anim) {
+  const u = "$" + c.usd.toFixed(2);
+  return '<div class="detail' + (anim ? " anim" : "") + '">' +
+    '<div><div class="fl">Variant</div><span class="chip">Holo <small>' + u + "</small></span></div>" +
+    '<div><div class="fl">Tilstand</div><div class="conds">' +
+    CONDS.map((x) => '<span class="cond" data-c="' + x[0] + '"><b>' + x[0] + "</b><span>" + Math.round(x[2] * 100) + " %</span></span>").join("") +
+    '</div><p class="cdesc"></p></div>' +
+    '<div class="calc"><div class="csteps"><span>' + u + " markedspris</span><span>× 78 % utbetaling</span><span class=\"cstep\"></span><span>× 9,6005 kr per dollar</span></div>" +
+    '<div class="out"><small>Du får per kort</small><b class="cout"></b></div></div>' +
+    '<div class="actions"><span class="qty"><i>−</i><span>1</span><i>+</i></span><span class="btn addbtn">Legg til</span></div></div>';
+}
+function closeDetail() { document.querySelectorAll("#results .row.open").forEach((r) => { r.classList.remove("open"); r.querySelector(".detail")?.remove(); }); }
+function setCond(row, c, code, setOut) {
+  const cd = CONDS.find((x) => x[0] === code);
+  row.querySelectorAll(".cond").forEach((b) => b.classList.toggle("on", b.dataset.c === code));
+  row.querySelector(".cdesc").innerHTML = "<b>" + cd[1] + ":</b> " + cd[3];
+  row.querySelector(".cstep").textContent = "× " + Math.round(cd[2] * 100) + " % (" + code + ")";
+  if (setOut) row.querySelector(".cout").textContent = kr(pay(c.usd, cd[2]));
+}
+function openDetail(row, c, code, anim) { closeDetail(); row.classList.add("open"); row.insertAdjacentHTML("beforeend", detailHTML(c, anim)); setCond(row, c, code, true); }
+const firstRow = () => $("results").children[0];
+
+let totalV = 0;
+function setTotal(v) { totalV = v; $("total").textContent = kr(v); }
+async function countTo(v, ms = 700) { const a = totalV; await tween(ms, (k) => setTotal(Math.round((a + (v - a) * k) * 100) / 100)); sfx("coin"); }
+function itemHTML(it, anim) {
+  const th = it.kg ? '<span class="thumb kg">KG</span>' : '<span class="thumb" style="' + img(it.id) + '"></span>';
+  return '<li class="item' + (anim ? " anim" : "") + '">' + th + '<span class="n">' + it.n + '</span><span class="s">' + it.s + '</span><span class="p">' + kr(it.p) + "</span></li>";
+}
+function addItem(i, anim) { if (anim) sfx("pop"); $("items").insertAdjacentHTML("beforeend", itemHTML(ITEMS[i], anim)); $("slipEmpty").hidden = true; $("slipCount").textContent = COUNTS[i]; }
+function setItems(n) { $("items").innerHTML = ""; $("slipEmpty").hidden = n > 0; $("slipCount").textContent = "0 kort"; for (let i = 0; i < n; i++) addItem(i, false); setTotal(sumTo(n)); }
+const slipH = () => $("slip").clientHeight;
+const mainH = () => $("mcol").clientHeight;
+const doneY = () => { const d = $("done"), si = $("sinner"), top = offTop(d, si); return Math.max(0, Math.min(top - 8, top + d.offsetHeight - slipH() + 10)); };
+
+function reset() {
+  setOv($("ovIntro"), 1); setOv($("ovFlow"), 0); setOv($("ovOut"), 0);
+  ["pt0", "pt1", "pt2"].forEach((id) => $(id).classList.remove("on"));
+  $("pt0").textContent = kr(pay(23.74)); $("pt1").textContent = kr(pay(287.60, 0.85)); $("pt2").textContent = kr(pay(221.91));
+  document.querySelectorAll(".fs").forEach((f) => f.classList.remove("on"));
+  $("trackFill").style.width = "0%"; $("fnote").classList.remove("on");
+  $("mCash").classList.add("on"); $("mTrade").classList.remove("on", "hot");
+  setY($("page"), 0); setY($("minner"), 0); setY($("sinner"), 0);
+  $("qv").textContent = ""; $("kgv").textContent = "";
+  document.querySelectorAll(".focus,.press,.hot").forEach((e) => e.classList.remove("focus", "press", "hot"));
+  renderRows(FEATURED, "Populære kort", "Utvalg av 28 000 kort", false);
+  setItems(0);
+  FIELDS.forEach(([id]) => { $(id).querySelector(".v").textContent = ""; });
+  $("rAdult").classList.remove("on"); $("cOwn").classList.remove("on"); $("sendBtn").classList.add("off");
+  $("sendForm").hidden = false; $("done").hidden = true; $("done").classList.remove("anim");
+  showC(false); cursor.classList.remove("down"); cp.x = 760; cp.y = 430; placeC();
+  stage.querySelectorAll(".ripple").forEach((r) => r.remove());
+  cap("", "");
+}
+
+/* ---------- Scenene ---------- */
+const SCENES = [
+  { label: "Intro", dur: 3000,
+    async run() {
+      sfx("swell");
+      await wait(250);
+      for (const id of ["pt1", "pt0", "pt2"]) { $(id).classList.add("on"); sfx("pop"); await wait(250); }
+      await wait(1000);
+      sfx("whoosh");
+      await fade($("ovIntro"), 0, 450);
+    },
+    final() { setOv($("ovIntro"), 0); } },
+
+  { label: "Betaling", dur: 5000,
+    async run() {
+      cap("1", "Velg hvordan du vil få betalt");
+      cp.x = 700; cp.y = 520; placeC(); showC(true);
+      await wait(150);
+      await moveTo($("mTrade"), 700, 0.45, 0.55); $("mTrade").classList.add("hot");
+      cap("1", "Innbytte: 83 % av markedsprisen som tilgode i nettbutikken");
+      await wait(1400);
+      $("mTrade").classList.remove("hot");
+      await moveTo($("mCash"), 650, 0.45, 0.55); await click($("mCash"));
+      cap("1", "Utbetaling: 78 % av markedsprisen, betalt til deg");
+    },
+    final() { $("mCash").classList.add("on"); $("mTrade").classList.remove("hot"); showC(true); } },
+
+  { label: "Søk", dur: 5500,
+    async run() {
+      cap("2", "Søk opp kortet med navn, nummer eller sett");
+      sfx("whoosh");
+      await scrollTo($("page"), $("pgrid").offsetTop, 650);
+      await moveTo($("sbox"), 550, 0.3, 0.5); await click($("sbox")); $("sbox").classList.add("focus");
+      await wait(150);
+      await type($("qv"), "charizard", 85);
+      await wait(250);
+      renderRows(CHAR, "Treff for «charizard»", "", true);
+      await wait(900);
+      cap("2", "Du ser hva du får for hvert kort med en gang");
+    },
+    final() { setY($("page"), $("pgrid").offsetTop); $("sbox").classList.add("focus"); $("qv").textContent = "charizard"; renderRows(CHAR, "Treff for «charizard»", "", false); } },
+
+  { label: "Tilstand og pris", dur: 8000,
+    async run() {
+      const row = firstRow(), c = CHAR[0];
+      cap("3", "Trykk på kortet, og velg variant og tilstand");
+      await moveTo(row.querySelector(".head"), 550, 0.35, 0.5); row.classList.add("hot");
+      await wait(120); await click(row); row.classList.remove("hot");
+      $("sbox").classList.remove("focus");
+      openDetail(row, c, "NM", true);
+      await scrollTo($("minner"), offTop(row, $("minner")) - 6, 550);
+      await wait(450);
+      const lp = row.querySelector('.cond[data-c="LP"]');
+      await moveTo(lp, 550); await click(lp); setCond(row, c, "LP", false);
+      cap("3", "Prisen regnes ut med en gang: markedspris × 78 % × tilstand × kurs");
+      const out = row.querySelector(".cout"), a = pay(c.usd), b = pay(c.usd, 0.85);
+      await tween(600, (k) => { out.textContent = kr(Math.round((a + (b - a) * k) * 100) / 100); });
+      await wait(1600);
+      const add = row.querySelector(".addbtn");
+      await moveTo(add, 600); await click(add);
+    },
+    final() {
+      const row = firstRow(); $("sbox").classList.remove("focus");
+      openDetail(row, CHAR[0], "LP", false); setY($("minner"), offTop(row, $("minner")) - 6);
+    } },
+
+  { label: "Tilbudet", dur: 7000,
+    async run() {
+      cap("4", "Kortet havner i tilbudet ditt til høyre");
+      addItem(0, true); await countTo(sumTo(1), 600);
+      await wait(800);
+      cap("4", "Legg til så mange kort du vil");
+      closeDetail(); bg(scrollTo($("minner"), 0, 450));
+      await moveTo($("sbox"), 550, 0.3, 0.5); await click($("sbox")); $("sbox").classList.add("focus");
+      $("qv").textContent = ""; await wait(100);
+      await type($("qv"), "mew ex 151", 60);
+      renderRows(MEW, "Treff for «mew ex 151»", "", true);
+      await wait(400);
+      const row = firstRow();
+      await moveTo(row.querySelector(".head"), 500, 0.35, 0.5); await click(row);
+      $("sbox").classList.remove("focus");
+      openDetail(row, MEW[0], "NM", true);
+      await scrollTo($("minner"), offTop(row, $("minner")) - 6, 450);
+      const add = row.querySelector(".addbtn");
+      await moveTo(add, 500); await click(add);
+      addItem(1, true); await countTo(sumTo(2), 600);
+    },
+    final() {
+      $("qv").textContent = "mew ex 151"; $("sbox").classList.remove("focus");
+      renderRows(MEW, "Treff for «mew ex 151»", "", false);
+      const row = firstRow(); openDetail(row, MEW[0], "NM", false); setY($("minner"), offTop(row, $("minner")) - 6);
+      setItems(2);
+    } },
+
+  { label: "Bulk", dur: 5000,
+    async run() {
+      cap("Tips", "Mange vanlige kort? Vei dem og legg dem til som bulk");
+      closeDetail();
+      setY($("minner"), Math.min(getY($("minner")), offTop($("bulkSec"), $("minner")) - 8));
+      sfx("whoosh");
+      await scrollTo($("minner"), offTop($("bulkSec"), $("minner")) - 8, 650);
+      await moveTo($("kgBox"), 550, 0.3, 0.5); await click($("kgBox")); $("kgBox").classList.add("focus");
+      await type($("kgv"), "1,5", 140);
+      await wait(150);
+      await moveTo($("kgAdd"), 450); await click($("kgAdd")); $("kgBox").classList.remove("focus");
+      cap("Tips", "Fast pris per kilo, og vekten kontrolleres når vi får kortene");
+      addItem(2, true); await countTo(sumTo(3), 600);
+    },
+    final() {
+      closeDetail(); setY($("minner"), offTop($("bulkSec"), $("minner")) - 8);
+      $("kgv").textContent = "1,5"; $("kgBox").classList.remove("focus"); setItems(3);
+    } },
+
+  { label: "Send inn", dur: 8500,
+    async run() {
+      const si = $("sinner");
+      cap("5", "Fyll inn navn, e-post og adresse");
+      sfx("whoosh");
+      await scrollTo(si, Math.max(0, offTop($("sendForm"), si) - 10), 600);
+      for (const [id, val] of FIELDS) {
+        const f = $(id);
+        await reveal(si, f, slipH(), 250);
+        await moveTo(f, 340, 0.25, 0.5); await click(f); f.classList.add("focus");
+        await type(f.querySelector(".v"), val, 22);
+        f.classList.remove("focus");
+      }
+      await reveal(si, $("rAdult"), slipH(), 250);
+      await moveTo($("rAdult"), 340, 0.05, 0.5); await click($("rAdult")); $("rAdult").classList.add("on");
+      cap("5", "Bekreft at kortene er dine, og send tilbudet");
+      await reveal(si, $("cOwn"), slipH(), 250);
+      await moveTo($("cOwn"), 340, 0.05, 0.5); await click($("cOwn")); $("cOwn").classList.add("on"); $("sendBtn").classList.remove("off");
+      await reveal(si, $("sendBtn"), slipH(), 250);
+      await moveTo($("sendBtn"), 400); await wait(100); await click($("sendBtn"));
+    },
+    final() {
+      FIELDS.forEach(([id, val]) => { $(id).querySelector(".v").textContent = val; $(id).classList.remove("focus"); });
+      $("rAdult").classList.add("on"); $("cOwn").classList.add("on"); $("sendBtn").classList.remove("off");
+      setY($("sinner"), revealY($("sinner"), $("sendBtn"), slipH()));
+    } },
+
+  { label: "Kvittering", dur: 4000,
+    async run() {
+      const si = $("sinner");
+      $("sendForm").hidden = true; $("done").hidden = false; $("done").classList.add("anim");
+      setY(si, Math.min(getY(si), doneY()));
+      sfx("success");
+      cap("✓", "Tilbudet er sendt, og du får en referanse med en gang");
+      await scrollTo(si, doneY(), 450);
+      await wait(300); showC(false);
+      await wait(1300);
+      cap("✓", "Skriv referansen på en lapp, og send kortene til oss");
+    },
+    final() { $("sendForm").hidden = true; $("done").hidden = false; setY($("sinner"), doneY()); showC(false); } },
+
+  { label: "Etterpå", dur: 7000,
+    async run() {
+      sfx("whoosh");
+      await fade($("ovFlow"), 1, 400);
+      const cards = [...document.querySelectorAll(".fs")];
+      for (let i = 0; i < cards.length; i++) {
+        cards[i].classList.add("on"); sfx("step", i);
+        await tween(1000, (k) => { $("trackFill").style.width = ((i + k) / cards.length) * 100 + "%"; }, linear);
+      }
+      $("fnote").classList.add("on");
+    },
+    final() {
+      setOv($("ovFlow"), 1); document.querySelectorAll(".fs").forEach((f) => f.classList.add("on"));
+      $("trackFill").style.width = "100%"; $("fnote").classList.add("on");
+    } },
+
+  { label: "Slutt", dur: 3500,
+    async run() { sfx("swell"); await fade($("ovOut"), 1, 500); },
+    final() { setOv($("ovOut"), 1); } }
+];
+let acc = 0;
+SCENES.forEach((s) => { s.start = acc; acc += s.dur; });
+const TOTAL = acc;
+
+/* ---------- Avspilling ---------- */
+function sceneAt(t) { let i = 0; SCENES.forEach((s, j) => { if (t >= s.start) i = j; }); return i; }
+function runFrom(i) {
+  gen++; const g = gen;
+  const old = waiters; waiters = []; old.forEach((w) => w.go());
+  ended = false; window.demoDone = false;
+  reset();
+  for (let j = 0; j < i; j++) SCENES[j].final();
+  clock.t = SCENES[i].start;
+  (async () => {
+    try {
+      for (let j = i; j < SCENES.length; j++) {
+        await SCENES[j].run();
+        await until(SCENES[j].start + SCENES[j].dur);
+        if (g !== gen) return;
+        SCENES[j].final();
+      }
+      ended = true; clock.t = TOTAL; setPlaying(false); window.demoDone = true;
+    } catch (e) { if (e !== ABORT) console.error(e); }
+  })();
+}
+function setPlaying(p) {
+  clock.playing = p;
+  $("icPause").toggleAttribute("hidden", !p); $("icPlay").toggleAttribute("hidden", p);
+  $("playBtn").setAttribute("aria-label", p ? "Pause" : ended ? "Spill av igjen" : "Spill av");
+}
+const mmss = (ms) => { const s = Math.floor(ms / 1000); return Math.floor(s / 60) + ":" + String(s % 60).padStart(2, "0"); };
+let lastSec = -1, lastScene = -1;
+function ui() {
+  const t = Math.min(clock.t, TOTAL);
+  $("fill").style.width = (t / TOTAL) * 100 + "%";
+  const s = Math.floor(t / 1000);
+  if (s !== lastSec) { lastSec = s; $("time").textContent = mmss(t) + " / " + mmss(TOTAL); $("bar").setAttribute("aria-valuenow", s); $("bar").setAttribute("aria-valuetext", mmss(t)); }
+  const k = sceneAt(t);
+  if (k !== lastScene) { lastScene = k; document.querySelectorAll("#chapters button").forEach((b, j) => b.classList.toggle("on", j === k)); }
+}
+function jump(i) { runFrom(Math.max(0, Math.min(SCENES.length - 1, i))); setPlaying(true); }
+
+const bar = $("bar");
+bar.setAttribute("aria-valuemax", Math.floor(TOTAL / 1000));
+SCENES.forEach((s, i) => {
+  if (i > 0) { const t = document.createElement("span"); t.className = "tick"; t.style.left = (s.start / TOTAL) * 100 + "%"; bar.appendChild(t); }
+  const b = document.createElement("button"); b.type = "button"; b.textContent = s.label; b.addEventListener("click", () => jump(i)); $("chapters").appendChild(b);
+});
+bar.addEventListener("click", (e) => { const r = bar.getBoundingClientRect(); jump(sceneAt(((e.clientX - r.left) / r.width) * TOTAL)); });
+bar.addEventListener("keydown", (e) => {
+  if (e.key === "ArrowRight") { e.preventDefault(); jump(sceneAt(clock.t) + 1); }
+  if (e.key === "ArrowLeft") { e.preventDefault(); jump(sceneAt(clock.t) - 1); }
+});
+$("playBtn").addEventListener("click", () => { if (ended) jump(0); else setPlaying(!clock.playing); });
+$("restartBtn").addEventListener("click", () => jump(0));
+$("sndBtn").addEventListener("click", () => setSound(!soundOn));
+$("sndPill").addEventListener("click", () => { setSound(true); if (ended) jump(0); else setPlaying(true); });
+setSound(false);
+document.addEventListener("keydown", (e) => {
+  if (e.code === "Space" && !(e.target instanceof HTMLButtonElement)) { e.preventDefault(); if (ended) jump(0); else setPlaying(!clock.playing); }
+});
+
+fit(); reset(); ui();
+requestAnimationFrame(frame);
+const reduce = matchMedia("(prefers-reduced-motion: reduce)").matches;
+Promise.race([document.fonts.ready, new Promise((r) => setTimeout(r, 2000))]).then(() => {
+  fit(); runFrom(0);
+  if (MANUAL) { setPlaying(true); window.__ready = true; }
+  else if (REC) { setPlaying(false); setTimeout(() => setPlaying(true), 700); }
+  else setPlaying(!reduce);
+});
+</script>

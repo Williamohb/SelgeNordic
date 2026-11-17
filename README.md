@@ -83,11 +83,24 @@ Avslår selgeren, blir status **Avslått**, og du får e-post med adressen korte
 
 **Oppdatere skriptet til denne versjonen (én gang):**
 1. Lim inn hele den nye `google-apps-script/Code.gs` i Apps Script og trykk **Lagre**.
+   Sjekk at `WEBAPP_URL` øverst er nettapp-adressen din (slutter på `/exec`). Lenkene til selgeren bruker den.
 2. **Distribuer → Administrer distribusjoner → blyant → Versjon: Ny versjon → Distribuer.** Adressen blir den samme.
 3. Google ber om nye tillatelser (Google Drive, for kjøpsbevisene). Godkjenn.
 4. Last inn regnearket på nytt. Menyen **PokéNordic** dukker opp øverst.
 
-Merk: E-postene til selgeren sendes fra Google-kontoen som eier skriptet. Svar fra selgeren går til kundeservice@pokenordic.no.
+## Sende e-post fra kundeservice@pokenordic.no
+
+Skriptet sender fra adressen i `FROM_ADDRESS` (kundeservice@pokenordic.no), men bare når adressen er
+godkjent som «Send e-post som» i Gmail-kontoen som eier skriptet. Ellers sendes det fra kontoens egen adresse.
+
+1. Åpne Gmail med kontoen som eier regnearket og skriptet.
+2. **Tannhjulet → Se alle innstillingene → Kontoer og import → Send e-post som → Legg til en annen e-postadresse.**
+3. Navn: `PokéNordic`, e-post: `kundeservice@pokenordic.no`. La «Behandle som et alias» være avkrysset. Trykk **Neste trinn**.
+4. Fyll inn SMTP-innstillingene fra den som leverer e-posten for pokenordic.no (server, port, brukernavn og passord for kundeservice-kontoen).
+5. Gmail sender en bekreftelseskode til kundeservice@pokenordic.no. Lim den inn.
+6. Lim inn den nye `Code.gs`, trykk **Lagre**, og distribuer **Ny versjon**. Godkjenn den nye Gmail-tillatelsen.
+
+Fra da av kommer alle e-poster fra skriptet fra kundeservice@pokenordic.no.
 
 ## Kjøre lokalt
 

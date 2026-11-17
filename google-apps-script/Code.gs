@@ -15,12 +15,18 @@
 const OWNER_EMAIL = "kundeservice@pokenordic.no";  // her kommer tilbudene
 const SEND_SELLER_COPY = false;  // true = selgeren får en kopi av innsendt tilbud på e-post
 const SENDER_NAME = "PokéNordic innkjøp";
+// Avsenderadresse på e-postene. Må være lagt til som «Send e-post som» i Gmail-kontoen som eier skriptet
+// (se README). Er den ikke godkjent der ennå, sendes e-posten fra kontoens egen adresse som før.
+const FROM_ADDRESS = "kundeservice@pokenordic.no";
 const BUYER = {
   name: "PokeNordic Hornberg",
   orgnr: "936 651 623 MVA",
   address: "Vestneshaugen 35, 6390 Vestnes"
 };
 const DRIVE_FOLDER = "PokéNordic kjøpsbevis";  // mappe i Google Drive for kjøpsbevis (lages automatisk)
+// Den offentlige nettapp-adressen (…/exec). Brukes i lenkene til selgeren. Må være satt:
+// når menyen kjøres fra regnearket, gir Google ellers en intern adresse som selgeren ikke kan åpne.
+const WEBAPP_URL = "https://script.google.com/macros/s/AKfycbztuYAxSOWskMnvYkX-8nxBDgYKS9k_q9ymVKbKdJkCxIKKzZs1XnOs-JTFVZUYgoG34g/exec";
 const TZ = "Europe/Oslo";
 // ===============================
 
@@ -68,7 +74,7 @@ function doPost(e) {
       lock.releaseLock();
     }
 
-    MailApp.sendEmail({
+    sendMail_({
       to: OWNER_EMAIL,
       subject: (d.needsApproval ? "⚠ KREVER GODKJENNING – " : "") + "Nytt tilbud #" + d.ref + " – " + d.seller.name + " – " + kr_(d.total) + " (" + d.modeName.toLowerCase() + ")",
       htmlBody: mailHtml_(d, true),
@@ -76,7 +82,7 @@ function doPost(e) {
       name: SENDER_NAME
     });
     if (SEND_SELLER_COPY && isEmail_(d.seller.contact)) {
-      MailApp.sendEmail({
+      sendMail_({
         to: d.seller.contact,
         subject: "Vi har mottatt tilbudet ditt #" + d.ref,
         htmlBody: mailHtml_(d, false),
@@ -157,9 +163,9 @@ function sendFinalOffer() {
     "Kjøpsbevis": file.getUrl()
   });
 
-  const base = ScriptApp.getService().getUrl();
+  const base = WEBAPP_URL;
   const link = (a) => base + "?a=" + a + "&ref=" + encodeURIComponent(offer.ref) + "&t=" + encodeURIComponent(token);
-  MailApp.sendEmail({
+  sendMail_({
     to: offer.contact,
     subject: "Endelig tilbud #" + offer.ref + " fra PokéNordic – " + kr_(total),
     htmlBody: finalOfferMail_(offer, lines, total, link("godta"), link("avsla")),
@@ -209,7 +215,7 @@ function doGet(e) {
 
   const lines = readLines_(ss, offer.ref, true);
   const total = offer.finalTotal || round2_(lines.reduce((s, l) => s + l.sum, 0));
-  const base = ScriptApp.getService().getUrl();
+  const base = WEBAPP_URL;
 
   if (p.a === "avsla") {
     if (p.ok !== "1") {
@@ -221,7 +227,7 @@ function doGet(e) {
     }
     const lock = LockService.getScriptLock(); lock.waitLock(20000);
     try { setOffer_(ss, rowNum, { "Status": "Avslått" }); } finally { lock.releaseLock(); }
-    MailApp.sendEmail({ to: OWNER_EMAIL, subject: "Tilbud #" + offer.ref + " er AVSLÅTT – send kortene tilbake", name: SENDER_NAME,
+    sendMail_({ to: OWNER_EMAIL, subject: "Tilbud #" + offer.ref + " er AVSLÅTT – send kortene tilbake", name: SENDER_NAME,
       htmlBody: "<p>" + esc_(offer.name) + " har avslått det endelige tilbudet #" + esc_(offer.ref) + " (" + kr_(total) + ").</p><p>Send kortene tilbake til:<br>" +
         esc_(offer.name) + "<br>" + esc_(offer.street) + "<br>" + esc_(offer.zip + " " + offer.city) + "</p><p>Selgeren betaler returfrakten.</p>" });
     return page_("Tilbudet er avslått", "<p>Takk for svaret. Vi sender kortene tilbake til deg så snart som mulig. Returfrakten betaler du, og vi tar kontakt om det.</p>");
@@ -272,11 +278,11 @@ function doGet(e) {
       });
     } finally { lock.releaseLock(); }
 
-    MailApp.sendEmail({ to: offer.contact, subject: "Kjøpsbevis #" + offer.ref + " – takk for handelen!", attachments: [pdf], replyTo: OWNER_EMAIL, name: SENDER_NAME,
+    sendMail_({ to: offer.contact, subject: "Kjøpsbevis #" + offer.ref + " – takk for handelen!", attachments: [pdf], replyTo: OWNER_EMAIL, name: SENDER_NAME,
       htmlBody: "<div style=\"font-family:Arial,sans-serif;font-size:14px\"><p>Hei " + esc_(offer.name) + "!</p><p>Takk, du har godtatt tilbud <b>#" + esc_(offer.ref) +
         "</b> på <b>" + kr_(total) + "</b>. Det signerte kjøpsbeviset ligger vedlagt.</p><p>" +
         (cash ? "Vi starter utbetalingen i dag." : "Du får butikkreditten på e-post i dag.") + "</p><p>Hilsen PokéNordic</p></div>" });
-    MailApp.sendEmail({ to: OWNER_EMAIL, subject: "✅ Tilbud #" + offer.ref + " GODTATT – " + (cash ? "betal " : "gi butikkreditt ") + kr_(total), attachments: [pdf], name: SENDER_NAME,
+    sendMail_({ to: OWNER_EMAIL, subject: "✅ Tilbud #" + offer.ref + " GODTATT – " + (cash ? "betal " : "gi butikkreditt ") + kr_(total), attachments: [pdf], name: SENDER_NAME,
       htmlBody: "<div style=\"font-family:Arial,sans-serif;font-size:14px\"><p><b>" + esc_(offer.name) + "</b> har godtatt og signert tilbud #" + esc_(offer.ref) + ".</p>" +
         "<p><b>" + (cash ? "Utbetal " + kr_(total) + " til: " + esc_(payto) : "Gi butikkreditt på " + kr_(total) + " til " + esc_(offer.contact)) + "</b></p>" +
         '<p>Kjøpsbevis: <a href="' + esc_(file.getUrl()) + '">' + esc_(file.getName()) + "</a></p>" +
@@ -452,6 +458,20 @@ function hidden_(o) {
 }
 
 /* ---------- hjelpefunksjoner ---------- */
+
+// Sender e-post fra FROM_ADDRESS når den er godkjent som «Send e-post som» i Gmail, ellers fra kontoens egen adresse.
+function sendMail_(o) {
+  let aliases = [];
+  try { aliases = GmailApp.getAliases().map((a) => String(a).toLowerCase()); } catch (e) { aliases = []; }
+  if (FROM_ADDRESS && aliases.indexOf(FROM_ADDRESS.toLowerCase()) >= 0) {
+    const opts = { htmlBody: o.htmlBody, name: o.name || SENDER_NAME, from: FROM_ADDRESS };
+    if (o.attachments) opts.attachments = o.attachments;
+    if (o.replyTo) opts.replyTo = o.replyTo;
+    GmailApp.sendEmail(o.to, o.subject, "Denne e-posten må vises med HTML.", opts);
+  } else {
+    MailApp.sendEmail(o);
+  }
+}
 
 function validate_(d) {
   const s = d && d.seller;
