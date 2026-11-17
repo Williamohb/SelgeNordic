@@ -1,16 +1,27 @@
 /**
- * PokéNordic innkjøp – mottak av tilbud fra portalen.
+ * PokéNordic innkjøp – mottak av tilbud, endelig tilbud og kjøpsbevis.
  *
- * Lagrer hvert tilbud i dette regnearket (fanene «Tilbud» og «Kort») og
- * sender tilbudet på e-post til OWNER_EMAIL.
+ * 1. doPost: tar imot tilbud fra portalen, lagrer dem i fanene «Tilbud» og
+ *    «Kort» og sender e-post til OWNER_EMAIL.
+ * 2. Menyen «PokéNordic» i regnearket: når kortene er kontrollert, sender du
+ *    det endelige tilbudet med kjøpsbevis (PDF) til selgeren.
+ * 3. doGet: siden selgeren åpner fra e-posten for å godta (signere) eller
+ *    avslå. Signert kjøpsbevis lagres i Google Drive.
  *
- * Oppsett: se README.md i prosjektet, avsnittet «Automatisk innsending».
+ * Oppsett og arbeidsflyt: se README.md i prosjektet.
  */
 
 // ======== INNSTILLINGER ========
 const OWNER_EMAIL = "kundeservice@pokenordic.no";  // her kommer tilbudene
-const SEND_SELLER_COPY = false;  // true = selgeren får en kopi på e-post (sendes fra Google-kontoen din)
+const SEND_SELLER_COPY = false;  // true = selgeren får en kopi av innsendt tilbud på e-post
 const SENDER_NAME = "PokéNordic innkjøp";
+const BUYER = {
+  name: "PokeNordic Hornberg",
+  orgnr: "936 651 623 MVA",
+  address: "Vestneshaugen 35, 6390 Vestnes"
+};
+const DRIVE_FOLDER = "PokéNordic kjøpsbevis";  // mappe i Google Drive for kjøpsbevis (lages automatisk)
+const TZ = "Europe/Oslo";
 // ===============================
 
 const OFFER_HEADERS = [
@@ -18,10 +29,16 @@ const OFFER_HEADERS = [
   "Under 18", "Foresatt", "Foresatt kontakt", "Oppgjør", "Sats", "Antall kort",
   "Estimert sum (kr)", "Alternativ sum (kr)", "USD/NOK", "Prisdato", "Kommentar"
 ];
+// Kolonner som legges til automatisk når de trengs (også i regneark laget med eldre versjon)
+const OFFER_EXTRA = ["Endelig sum (kr)", "Endelig tilbud sendt", "Token", "Signert av", "Signert tidspunkt", "Utbetaling til", "Kjøpsbevis"];
 const CARD_HEADERS = [
   "Mottatt", "Referanse", "Varenr", "Kort", "Sett", "Nummer", "Variant", "Tilstand",
   "Antall", "Markedspris (USD)", "Pris/stk (kr)", "Sum (kr)", "TCGPlayer-ID", "Status"
 ];
+
+/* ======================================================================
+   1. Mottak av tilbud fra portalen
+   ====================================================================== */
 
 function doPost(e) {
   try {
@@ -73,8 +90,365 @@ function doPost(e) {
   }
 }
 
-function doGet() {
-  return json_({ ok: true, service: "PokéNordic innkjøp" });
+/* ======================================================================
+   2. Meny i regnearket: send endelig tilbud
+   ====================================================================== */
+
+function onOpen() {
+  SpreadsheetApp.getUi()
+    .createMenu("PokéNordic")
+    .addItem("Send endelig tilbud for valgt tilbud", "sendFinalOffer")
+    .addItem("Merk valgt tilbud som betalt", "markPaid")
+    .addSeparator()
+    .addItem("Slik fungerer det", "showHelp")
+    .addToUi();
+}
+
+function showHelp() {
+  SpreadsheetApp.getUi().alert(
+    "Slik sender du endelig tilbud",
+    "1. Kontroller kortene.\n" +
+    "2. I fanen «Kort»: rett Tilstand, Antall og Pris/stk (kr) for referansen der det trengs. " +
+    "Kort du ikke kjøper, får Status «Avvist».\n" +
+    "3. I fanen «Tilbud»: klikk på raden til tilbudet.\n" +
+    "4. Velg PokéNordic → «Send endelig tilbud for valgt tilbud».\n\n" +
+    "Selgeren får e-post med kjøpsbevis og en lenke for å godta eller avslå. " +
+    "Når selgeren godtar, lagres det signerte kjøpsbeviset i Google Drive-mappa «" + DRIVE_FOLDER + "», og du får e-post om hvor pengene skal betales.",
+    SpreadsheetApp.getUi().ButtonSet.OK
+  );
+}
+
+function sendFinalOffer() {
+  const ui = SpreadsheetApp.getUi();
+  const ss = SpreadsheetApp.getActiveSpreadsheet();
+  const sh = ss.getActiveSheet();
+  if (sh.getName() !== "Tilbud") { ui.alert("Gå til fanen «Tilbud» og klikk på raden til tilbudet først."); return; }
+  const rowNum = sh.getActiveRange().getRow();
+  if (rowNum < 2) { ui.alert("Klikk på raden til tilbudet du vil sende (ikke overskriften)."); return; }
+
+  const offer = readOffer_(ss, rowNum);
+  if (!offer.ref) { ui.alert("Fant ingen referanse på denne raden."); return; }
+  if (["Godtatt", "Betalt"].indexOf(offer.status) >= 0) { ui.alert("Tilbud #" + offer.ref + " er allerede " + offer.status.toLowerCase() + "."); return; }
+  if (!isEmail_(offer.contact)) { ui.alert("Selgeren har ingen gyldig e-postadresse: " + offer.contact); return; }
+
+  const lines = readLines_(ss, offer.ref, true);
+  if (!lines.length) { ui.alert("Fant ingen kort for #" + offer.ref + " i fanen «Kort» (eller alle er avvist)."); return; }
+  const total = round2_(lines.reduce((s, l) => s + l.sum, 0));
+
+  const answer = ui.alert(
+    "Send endelig tilbud #" + offer.ref + "?",
+    offer.name + " (" + offer.contact + ")\n" +
+    lines.length + " linjer · " + offer.mode + "\n" +
+    "Estimert: " + kr_(offer.estimate) + "\nEndelig: " + kr_(total) + "\n\n" +
+    "Selgeren får e-post med kjøpsbevis og lenke for å godta eller avslå.",
+    ui.ButtonSet.YES_NO
+  );
+  if (answer !== ui.Button.YES) return;
+
+  const token = offer.token || Utilities.getUuid();
+  const pdf = receiptPdf_(offer, lines, total, null);
+  const file = folder_().createFile(pdf);
+
+  setOffer_(ss, rowNum, {
+    "Status": "Endelig tilbud sendt",
+    "Endelig sum (kr)": total,
+    "Endelig tilbud sendt": new Date(),
+    "Token": token,
+    "Kjøpsbevis": file.getUrl()
+  });
+
+  const base = ScriptApp.getService().getUrl();
+  const link = (a) => base + "?a=" + a + "&ref=" + encodeURIComponent(offer.ref) + "&t=" + encodeURIComponent(token);
+  MailApp.sendEmail({
+    to: offer.contact,
+    subject: "Endelig tilbud #" + offer.ref + " fra PokéNordic – " + kr_(total),
+    htmlBody: finalOfferMail_(offer, lines, total, link("godta"), link("avsla")),
+    attachments: [pdf],
+    replyTo: OWNER_EMAIL,
+    name: SENDER_NAME
+  });
+  ui.alert("Sendt til " + offer.contact + ".\nKjøpsbeviset (til godkjenning) ligger i Google Drive-mappa «" + DRIVE_FOLDER + "».");
+}
+
+function markPaid() {
+  const ui = SpreadsheetApp.getUi();
+  const ss = SpreadsheetApp.getActiveSpreadsheet();
+  const sh = ss.getActiveSheet();
+  if (sh.getName() !== "Tilbud") { ui.alert("Gå til fanen «Tilbud» og klikk på raden først."); return; }
+  const rowNum = sh.getActiveRange().getRow();
+  if (rowNum < 2) return;
+  const offer = readOffer_(ss, rowNum);
+  if (offer.status !== "Godtatt") { ui.alert("Bare godtatte tilbud kan merkes som betalt. Status nå: " + offer.status); return; }
+  setOffer_(ss, rowNum, { "Status": "Betalt" });
+  ui.alert("Tilbud #" + offer.ref + " er merket som betalt.");
+}
+
+/* ======================================================================
+   3. Siden selgeren åpner fra e-posten: godta (signere) eller avslå
+   ====================================================================== */
+
+function doGet(e) {
+  const p = (e && e.parameter) || {};
+  if (!p.a) return json_({ ok: true, service: "PokéNordic innkjøp" });
+
+  const ss = SpreadsheetApp.getActiveSpreadsheet();
+  const rowNum = findOfferRow_(ss, p.ref);
+  const offer = rowNum ? readOffer_(ss, rowNum) : null;
+  if (!offer || !offer.token || p.t !== offer.token) {
+    return page_("Fant ikke tilbudet", "<p>Lenken er ugyldig eller utløpt. Ta kontakt på <b>" + OWNER_EMAIL + "</b> og oppgi referansen.</p>");
+  }
+  if (offer.status === "Godtatt" || offer.status === "Betalt") {
+    return page_("Tilbudet er godtatt", "<p>Du har allerede godtatt tilbud <b>#" + esc_(offer.ref) + "</b>. Takk!</p>");
+  }
+  if (offer.status === "Avslått") {
+    return page_("Tilbudet er avslått", "<p>Du har avslått tilbud <b>#" + esc_(offer.ref) + "</b>. Vi sender kortene tilbake til deg.</p>");
+  }
+  if (offer.status !== "Endelig tilbud sendt") {
+    return page_("Tilbudet er ikke klart", "<p>Tilbud <b>#" + esc_(offer.ref) + "</b> venter ikke på svar akkurat nå. Ta kontakt på <b>" + OWNER_EMAIL + "</b>.</p>");
+  }
+
+  const lines = readLines_(ss, offer.ref, true);
+  const total = offer.finalTotal || round2_(lines.reduce((s, l) => s + l.sum, 0));
+  const base = ScriptApp.getService().getUrl();
+
+  if (p.a === "avsla") {
+    if (p.ok !== "1") {
+      return page_("Avslå tilbudet?",
+        "<p>Vil du avslå tilbud <b>#" + esc_(offer.ref) + "</b> på <b>" + kr_(total) + "</b>?</p>" +
+        "<p>Vi sender da kortene tilbake til deg, og du betaler returfrakten.</p>" +
+        '<form method="get" action="' + esc_(base) + '" target="_top">' + hidden_({ a: "avsla", ref: offer.ref, t: p.t, ok: "1" }) +
+        '<button class="btn danger" type="submit">Ja, avslå tilbudet</button></form>');
+    }
+    const lock = LockService.getScriptLock(); lock.waitLock(20000);
+    try { setOffer_(ss, rowNum, { "Status": "Avslått" }); } finally { lock.releaseLock(); }
+    MailApp.sendEmail({ to: OWNER_EMAIL, subject: "Tilbud #" + offer.ref + " er AVSLÅTT – send kortene tilbake", name: SENDER_NAME,
+      htmlBody: "<p>" + esc_(offer.name) + " har avslått det endelige tilbudet #" + esc_(offer.ref) + " (" + kr_(total) + ").</p><p>Send kortene tilbake til:<br>" +
+        esc_(offer.name) + "<br>" + esc_(offer.street) + "<br>" + esc_(offer.zip + " " + offer.city) + "</p><p>Selgeren betaler returfrakten.</p>" });
+    return page_("Tilbudet er avslått", "<p>Takk for svaret. Vi sender kortene tilbake til deg så snart som mulig. Returfrakten betaler du, og vi tar kontakt om det.</p>");
+  }
+
+  if (p.a === "godta") {
+    const cash = offer.mode === "Utbetaling";
+    const errors = [];
+    if (p.ok === "1") {
+      if (String(p.name || "").trim().length < 3) errors.push("Skriv inn fullt navn som signatur.");
+      if (offer.minor && String(p.gname || "").trim().length < 3) errors.push("Foresatt må skrive inn fullt navn.");
+      if (cash && String(p.payto || "").trim().length < 5) errors.push("Skriv inn Vipps-nummer eller kontonummer.");
+      if (p.confirm !== "1") errors.push("Kryss av for at kortene er dine og at opplysningene stemmer.");
+    }
+    if (p.ok !== "1" || errors.length) {
+      return page_("Godta tilbud #" + offer.ref,
+        (errors.length ? '<p class="err">' + errors.map(esc_).join("<br>") + "</p>" : "") +
+        summary_(offer, lines, total) +
+        '<form method="get" action="' + esc_(base) + '" target="_top">' + hidden_({ a: "godta", ref: offer.ref, t: p.t, ok: "1" }) +
+        (cash ? '<label>Utbetal til (Vipps-nummer eller kontonummer)<input name="payto" required value="' + esc_(p.payto || "") + '"></label>'
+              : "<p>Beløpet blir gitt som butikkreditt (tilgode) i nettbutikken. Vi sender deg koden på e-post.</p>") +
+        '<label>Ditt fulle navn (signatur)<input name="name" required autocomplete="name" value="' + esc_(p.name || "") + '"></label>' +
+        (offer.minor ? '<label>Foresattes fulle navn (signatur)<input name="gname" required value="' + esc_(p.gname || "") + '"></label>' : "") +
+        '<label class="check"><input type="checkbox" name="confirm" value="1"' + (p.confirm === "1" ? " checked" : "") + "> Jeg godtar tilbudet, og bekrefter at kortene er mine og at opplysningene stemmer.</label>" +
+        '<button class="btn" type="submit">Godta og signer</button></form>' +
+        '<p class="small">Vil du heller avslå? <a href="' + esc_(base + "?a=avsla&ref=" + encodeURIComponent(offer.ref) + "&t=" + encodeURIComponent(p.t)) + '" target="_top">Avslå tilbudet</a></p>');
+    }
+
+    // Godtatt: lagre signatur, lag signert kjøpsbevis, send e-post
+    const signedAt = new Date();
+    const sig = {
+      name: String(p.name).trim(),
+      guardian: offer.minor ? String(p.gname || "").trim() : "",
+      at: signedAt,
+      email: offer.contact
+    };
+    const payto = cash ? String(p.payto).trim() : "Butikkreditt";
+    const pdf = receiptPdf_(offer, lines, total, sig);
+    const file = folder_().createFile(pdf);
+    const lock = LockService.getScriptLock(); lock.waitLock(20000);
+    try {
+      setOffer_(ss, rowNum, {
+        "Status": "Godtatt",
+        "Signert av": sig.name + (sig.guardian ? " / foresatt: " + sig.guardian : ""),
+        "Signert tidspunkt": signedAt,
+        "Utbetaling til": safe_(payto),
+        "Kjøpsbevis": file.getUrl()
+      });
+    } finally { lock.releaseLock(); }
+
+    MailApp.sendEmail({ to: offer.contact, subject: "Kjøpsbevis #" + offer.ref + " – takk for handelen!", attachments: [pdf], replyTo: OWNER_EMAIL, name: SENDER_NAME,
+      htmlBody: "<div style=\"font-family:Arial,sans-serif;font-size:14px\"><p>Hei " + esc_(offer.name) + "!</p><p>Takk, du har godtatt tilbud <b>#" + esc_(offer.ref) +
+        "</b> på <b>" + kr_(total) + "</b>. Det signerte kjøpsbeviset ligger vedlagt.</p><p>" +
+        (cash ? "Vi starter utbetalingen i dag." : "Du får butikkreditten på e-post i dag.") + "</p><p>Hilsen PokéNordic</p></div>" });
+    MailApp.sendEmail({ to: OWNER_EMAIL, subject: "✅ Tilbud #" + offer.ref + " GODTATT – " + (cash ? "betal " : "gi butikkreditt ") + kr_(total), attachments: [pdf], name: SENDER_NAME,
+      htmlBody: "<div style=\"font-family:Arial,sans-serif;font-size:14px\"><p><b>" + esc_(offer.name) + "</b> har godtatt og signert tilbud #" + esc_(offer.ref) + ".</p>" +
+        "<p><b>" + (cash ? "Utbetal " + kr_(total) + " til: " + esc_(payto) : "Gi butikkreditt på " + kr_(total) + " til " + esc_(offer.contact)) + "</b></p>" +
+        '<p>Kjøpsbevis: <a href="' + esc_(file.getUrl()) + '">' + esc_(file.getName()) + "</a></p>" +
+        "<p>Merk tilbudet som betalt i regnearket (PokéNordic → «Merk valgt tilbud som betalt») når det er gjort.</p></div>" });
+    return page_("Takk! Tilbudet er godtatt", "<p>Du har godtatt og signert tilbud <b>#" + esc_(offer.ref) + "</b> på <b>" + kr_(total) + "</b>.</p>" +
+      "<p>Det signerte kjøpsbeviset er sendt til <b>" + esc_(offer.contact) + "</b>. " + (cash ? "Utbetalingen starter i dag." : "Butikkreditten får du på e-post i dag.") + "</p>");
+  }
+
+  return page_("Ukjent handling", "<p>Lenken er ugyldig. Ta kontakt på <b>" + OWNER_EMAIL + "</b>.</p>");
+}
+
+/* ======================================================================
+   Lesing og skriving i regnearket
+   ====================================================================== */
+
+// Kolonnenummer (1-basert) per overskrift. Mangler en kolonne i «needed», legges den til bakerst.
+function cols_(sh, needed) {
+  const lastCol = Math.max(sh.getLastColumn(), 1);
+  const head = sh.getRange(1, 1, 1, lastCol).getValues()[0].map(String);
+  (needed || []).forEach((h) => {
+    if (head.indexOf(h) < 0) {
+      head.push(h);
+      sh.getRange(1, head.length).setValue(h).setFontWeight("bold");
+    }
+  });
+  const map = {};
+  head.forEach((h, i) => { if (h) map[h] = i + 1; });
+  return map;
+}
+
+function readOffer_(ss, rowNum) {
+  const sh = ss.getSheetByName("Tilbud");
+  const c = cols_(sh, OFFER_EXTRA);
+  const v = sh.getRange(rowNum, 1, 1, sh.getLastColumn()).getValues()[0];
+  const g = (h) => (c[h] ? v[c[h] - 1] : "");
+  return {
+    row: rowNum, ref: String(g("Referanse")), status: String(g("Status")), name: String(g("Selger")), contact: String(g("Kontakt")).trim(),
+    street: String(g("Adresse")), zip: String(g("Postnr")), city: String(g("Poststed")),
+    minor: String(g("Under 18")) === "Ja", guardian: String(g("Foresatt")), guardianContact: String(g("Foresatt kontakt")),
+    mode: String(g("Oppgjør")), estimate: Number(g("Estimert sum (kr)")) || 0, finalTotal: Number(g("Endelig sum (kr)")) || 0,
+    token: String(g("Token") || ""), received: g("Mottatt")
+  };
+}
+
+function setOffer_(ss, rowNum, values) {
+  const sh = ss.getSheetByName("Tilbud");
+  const c = cols_(sh, OFFER_EXTRA.concat(Object.keys(values)));
+  Object.keys(values).forEach((h) => sh.getRange(rowNum, c[h]).setValue(values[h]));
+}
+
+function findOfferRow_(ss, ref) {
+  const sh = ss.getSheetByName("Tilbud");
+  if (!sh || !ref) return 0;
+  const c = cols_(sh, []);
+  const refs = sh.getRange(1, c["Referanse"], sh.getLastRow(), 1).getValues();
+  for (let i = refs.length - 1; i >= 1; i--) if (String(refs[i][0]) === String(ref)) return i + 1;
+  return 0;
+}
+
+// Kortlinjene for en referanse. Antall × Pris/stk regnes ut på nytt (og skrives tilbake), så endringene dine telles med.
+function readLines_(ss, ref, writeBack) {
+  const sh = ss.getSheetByName("Kort");
+  if (!sh) return [];
+  const c = cols_(sh, []);
+  const data = sh.getRange(1, 1, sh.getLastRow(), sh.getLastColumn()).getValues();
+  const out = [];
+  for (let i = 1; i < data.length; i++) {
+    const r = data[i];
+    const g = (h) => r[c[h] - 1];
+    if (String(g("Referanse")) !== String(ref)) continue;
+    if (/avvist/i.test(String(g("Status")))) continue;
+    const qty = Number(String(g("Antall")).replace(",", ".")) || 0;
+    const each = Number(String(g("Pris/stk (kr)")).replace(",", ".")) || 0;
+    const sum = round2_(qty * each);
+    if (writeBack && Number(g("Sum (kr)")) !== sum) sh.getRange(i + 1, c["Sum (kr)"]).setValue(sum);
+    out.push({
+      nr: String(g("Varenr")), name: String(g("Kort")), set: String(g("Sett")), number: String(g("Nummer")),
+      variant: String(g("Variant")), cond: String(g("Tilstand")), qty: qty, each: each, sum: sum,
+      bulk: String(g("Variant")) === "per kg"
+    });
+  }
+  return out;
+}
+
+function folder_() {
+  const it = DriveApp.getFoldersByName(DRIVE_FOLDER);
+  return it.hasNext() ? it.next() : DriveApp.createFolder(DRIVE_FOLDER);
+}
+
+/* ======================================================================
+   Kjøpsbevis (PDF), e-post og sider
+   ====================================================================== */
+
+// Lager kjøpsbeviset som PDF. sig = null gir «til godkjenning», ellers signert versjon.
+function receiptPdf_(o, lines, total, sig) {
+  const fmt = (d) => Utilities.formatDate(d, TZ, "dd.MM.yyyy");
+  const fmtT = (d) => Utilities.formatDate(d, TZ, "dd.MM.yyyy 'kl.' HH:mm");
+  const td = "padding:6px 5px;border-bottom:1px solid #ccc;vertical-align:top;font-size:11px";
+  const tdr = td + ";text-align:right;white-space:nowrap";
+  const rows = lines.map((l) =>
+    "<tr><td style=\"" + td + ";font-family:monospace\">" + esc_(l.nr) + "</td><td style=\"" + td + "\">" + esc_(l.name) +
+    "<br><span style=\"color:#555\">" + esc_([l.set, l.number, l.bulk ? "" : l.variant].filter(String).join(" · ")) + "</span></td>" +
+    "<td style=\"" + td + "\">" + esc_(l.cond) + "</td><td style=\"" + tdr + "\">" + esc_(l.bulk ? String(l.qty).replace(".", ",") + " kg" : l.qty) +
+    "</td><td style=\"" + tdr + "\">" + kr_(l.each) + (l.bulk ? "/kg" : "") + "</td><td style=\"" + tdr + "\">" + kr_(l.sum) + "</td></tr>").join("");
+  const status = sig
+    ? '<div style="border:2px solid #1F8A55;color:#1F8A55;padding:6px;text-align:center;font-weight:bold;font-size:12px">SIGNERT ' + esc_(fmtT(sig.at)) + "</div>"
+    : '<div style="border:2px dashed #B4561B;color:#8A3E10;padding:6px;text-align:center;font-weight:bold;font-size:12px">TIL GODKJENNING – IKKE SIGNERT</div>';
+  const signBlock = sig
+    ? "<p style=\"font-size:11px;margin-top:20px\"><b>Elektronisk signert av selger:</b> " + esc_(sig.name) + ", " + esc_(fmtT(sig.at)) +
+      ", via personlig lenke sendt til " + esc_(sig.email) + ".</p>" +
+      (sig.guardian ? "<p style=\"font-size:11px\"><b>Godkjent av foresatt:</b> " + esc_(sig.guardian) + ", " + esc_(fmtT(sig.at)) + ".</p>" : "")
+    : "<p style=\"font-size:11px;margin-top:20px\">Selgeren godtar og signerer ved å trykke på lenken i e-posten og skrive inn fullt navn.</p>";
+  const html =
+    '<html><body style="font-family:Arial,sans-serif;color:#111;background:#fff;font-size:12px">' + status +
+    '<table style="width:100%;margin-top:14px"><tr><td><div style="font-size:22px;font-weight:bold;color:#1E6FDA">PokéNordic</div><div style="font-size:18px;font-weight:bold">Kjøpsbevis</div></td>' +
+    '<td style="text-align:right;font-size:11px">Referanse<br><b style="font-size:14px">#' + esc_(o.ref) + "</b><br>Dato " + esc_(fmt(sig ? sig.at : new Date())) + "</td></tr></table>" +
+    '<hr style="border:0;border-top:2px solid #111">' +
+    '<table style="width:100%;font-size:12px"><tr><td style="vertical-align:top;width:50%"><b style="font-size:10px;color:#555">KJØPER</b><br>' +
+    esc_(BUYER.name) + "<br>Org.nr. " + esc_(BUYER.orgnr) + "<br>" + esc_(BUYER.address) + "</td>" +
+    '<td style="vertical-align:top"><b style="font-size:10px;color:#555">SELGER (PRIVATPERSON)</b><br>' + esc_(o.name) + "<br>" + esc_(o.street) + "<br>" + esc_(o.zip + " " + o.city) + "<br>" + esc_(o.contact) +
+    (o.minor ? '<br><br><b style="font-size:10px;color:#555">FORESATT</b><br>' + esc_(o.guardian) + "<br>" + esc_(o.guardianContact) : "") + "</td></tr></table>" +
+    '<table style="width:100%;border-collapse:collapse;margin-top:14px"><thead><tr style="text-align:left;font-size:10px;color:#555">' +
+    "<th style=\"" + td + "\">VARENR.</th><th style=\"" + td + "\">KORT</th><th style=\"" + td + "\">TILSTAND</th><th style=\"" + tdr + "\">ANTALL</th><th style=\"" + tdr + "\">PRIS/ENHET</th><th style=\"" + tdr + "\">SUM</th></tr></thead>" +
+    "<tbody>" + rows + "</tbody></table>" +
+    '<p style="text-align:right;font-size:14px;margin-top:10px"><b>Kjøpssum ' + kr_(total) + "</b></p>" +
+    '<p style="font-size:11px"><b>Oppgjør:</b> ' + esc_(o.mode === "Utbetaling" ? "Utbetaling" : "Innbytte (butikkreditt i nettbutikken)") + ".</p>" +
+    '<p style="font-size:11px;color:#333">Kortene er kjøpt fra privatperson og videreselges etter avansemetoden (merverdiavgiftsloven § 4-6). ' +
+    "Kjøpsbevis etter bokføringsforskriften § 8-10-3. Ved signering bekrefter selger at kortene er selgers eiendom, og at opplysningene over er riktige.</p>" +
+    signBlock + "</body></html>";
+  const name = "Kjøpsbevis " + o.ref + (sig ? " – signert" : " – til godkjenning") + ".pdf";
+  return HtmlService.createHtmlOutput(html).getBlob().getAs(MimeType.PDF).setName(name);
+}
+
+function finalOfferMail_(o, lines, total, acceptUrl, declineUrl) {
+  const btn = (url, text, bg) => '<a href="' + esc_(url) + '" style="display:inline-block;padding:12px 20px;margin:4px 6px 4px 0;border-radius:8px;background:' + bg + ';color:#fff;font-weight:bold;text-decoration:none">' + text + "</a>";
+  const changed = Math.abs(total - o.estimate) >= 0.01;
+  return '<div style="font-family:Arial,sans-serif;font-size:14px;color:#111">' +
+    "<p>Hei " + esc_(o.name) + "!</p>" +
+    "<p>Vi har kontrollert kortene dine. Her er det endelige tilbudet for <b>#" + esc_(o.ref) + "</b>:</p>" +
+    summary_(o, lines, total) +
+    (changed ? '<p style="color:#555">Estimatet ditt var ' + kr_(o.estimate) + ". Endringen skyldes tilstand, antall eller kort vi ikke kan kjøpe.</p>" : "") +
+    "<p>Kjøpsbeviset ligger vedlagt. Godtar du, signerer du ved å trykke på knappen og skrive inn navnet ditt.</p>" +
+    "<p>" + btn(acceptUrl, "Godta og signer", "#1E6FDA") + btn(declineUrl, "Avslå", "#8A3E10") + "</p>" +
+    '<p style="color:#555;font-size:13px">Avslår du, sender vi kortene tilbake, og du betaler returfrakten. Spørsmål? Svar på denne e-posten.</p>' +
+    "<p>Hilsen PokéNordic</p></div>";
+}
+
+function summary_(o, lines, total) {
+  const td = 'style="padding:6px 8px;border-bottom:1px solid #ddd;vertical-align:top;font-size:13px"';
+  const tdr = 'style="padding:6px 8px;border-bottom:1px solid #ddd;text-align:right;white-space:nowrap;font-size:13px"';
+  return '<table style="border-collapse:collapse;width:100%;max-width:640px">' + lines.map((l) =>
+    "<tr><td " + td + ">" + esc_(l.name) + '<br><span style="color:#666;font-size:12px">' + esc_([l.set, l.number].filter(String).join(" · ")) + " · " + esc_(l.cond) +
+    "</span></td><td " + tdr + ">" + esc_(l.bulk ? String(l.qty).replace(".", ",") + " kg" : l.qty + " stk") + "</td><td " + tdr + ">" + kr_(l.sum) + "</td></tr>").join("") +
+    "</table><p><b>" + (o.mode === "Utbetaling" ? "Utbetaling" : "Butikkreditt") + ": " + kr_(total) + "</b></p>";
+}
+
+function page_(title, body) {
+  const css = ":root{color-scheme:light}body{font-family:Arial,sans-serif;background:#F2F6FC;color:#0F1A2E;margin:0;padding:24px 16px}" +
+    "input{background:#fff;color:#0F1A2E}" +
+    ".card{max-width:620px;margin:0 auto;background:#fff;border:1px solid #D6DFEC;border-radius:12px;padding:22px}" +
+    "h1{font-size:22px;margin:0 0 12px}.brand{color:#1E6FDA;font-weight:bold;font-size:18px;margin-bottom:10px}" +
+    "label{display:block;font-weight:bold;font-size:14px;margin:14px 0 4px}input[type=text],input:not([type]){width:100%;box-sizing:border-box;padding:10px;border:1.5px solid #D6DFEC;border-radius:8px;font-size:15px;font-weight:normal;margin-top:4px}" +
+    "label.check{font-weight:normal;display:flex;gap:8px;align-items:flex-start}.btn{margin-top:16px;padding:12px 20px;border:0;border-radius:8px;background:#1E6FDA;color:#fff;font-size:15px;font-weight:bold;cursor:pointer}" +
+    ".btn.danger{background:#8A3E10}.err{background:#fff3e0;border:1px solid #f0a35a;padding:10px;border-radius:8px}.small{font-size:13px;color:#555;margin-top:16px}";
+  return HtmlService.createHtmlOutput('<div class="card"><div class="brand">PokéNordic</div><h1>' + esc_(title) + "</h1>" + body + "</div>")
+    .setTitle(title + " – PokéNordic")
+    .addMetaTag("viewport", "width=device-width, initial-scale=1")
+    .append("<style>" + css + "</style>");
+}
+
+function hidden_(o) {
+  return Object.keys(o).map((k) => '<input type="hidden" name="' + esc_(k) + '" value="' + esc_(o[k]) + '">').join("");
 }
 
 /* ---------- hjelpefunksjoner ---------- */
@@ -116,6 +490,10 @@ function esc_(s) {
 
 function kr_(n) {
   return Number(n || 0).toLocaleString("nb-NO", { minimumFractionDigits: 2, maximumFractionDigits: 2 }) + " kr";
+}
+
+function round2_(n) {
+  return Math.round(n * 100) / 100;
 }
 
 function mailHtml_(d, forOwner) {

@@ -245,6 +245,7 @@ a.ext { color: var(--accent); font-size: 13px; text-underline-offset: 2px; }
   padding: clamp(18px, 4vw, 40px); max-width: 860px; width: 100%; font-size: 13.5px;
   box-shadow: 0 18px 40px -28px color-mix(in srgb, var(--ink) 50%, transparent);
 }
+.receipt .draft { margin: -4px 0 14px; padding: 6px 10px; border: 1.5px dashed #B4561B; color: #8A3E10; border-radius: 4px; font-size: 12px; font-weight: 700; letter-spacing: .06em; text-transform: uppercase; text-align: center; }
 .receipt header { display: flex; flex-wrap: wrap; justify-content: space-between; gap: 16px; align-items: flex-start; border-bottom: 2px solid var(--p-ink); padding-bottom: 14px; }
 .receipt header img { height: 40px; width: auto; }
 .receipt h3 { font-family: var(--font-display); font-size: 22px; margin: 0; letter-spacing: -0.01em; }
@@ -448,7 +449,7 @@ a.ext { color: var(--accent); font-size: 13px; text-underline-offset: 2px; }
         </label>
         <div class="hp" aria-hidden="true"><label for="website">Nettsted <input id="website" type="text" tabindex="-1" autocomplete="off"></label></div>
         <label class="check" for="confirmOwn"><input type="checkbox" id="confirmOwn"> Kortene er mine, og opplysningene over stemmer.</label>
-        <button class="btn" type="submit" id="makeBtn" disabled>Lag tilbud og kjøpsbevis</button>
+        <button class="btn" type="submit" id="makeBtn" disabled>Lag tilbud</button>
         <p class="fineprint" id="formMsg">Lista lagres bare i nettleseren din til du sender den.</p>
         <p class="fineprint">Personvern: Navn og adresse trengs fordi vi må føre kjøpsbevis for alle kort vi kjøper (bokføringsforskriften § 8-10-3). Opplysningene brukes bare til å behandle tilbudet og føre regnskap, og lagres i 5 år slik bokføringsreglene krever.</p>
         <div class="out-box" id="outBox" hidden>
@@ -456,7 +457,7 @@ a.ext { color: var(--accent); font-size: 13px; text-underline-offset: 2px; }
           <pre id="outText"></pre>
           <div class="actions">
             <button class="btn ghost" type="button" id="copyBtn">Kopier teksten</button>
-            <button class="linkbtn" type="button" id="toReceipt">Se kjøpsbeviset</button>
+            <button class="linkbtn" type="button" id="toReceipt">Se tilbudsoversikten</button>
             <button class="linkbtn" type="button" id="clearBtn">Tøm lista</button>
           </div>
           <div class="toast" id="toast" role="status"></div>
@@ -472,17 +473,17 @@ a.ext { color: var(--accent); font-size: 13px; text-underline-offset: 2px; }
         <p class="fineprint"><a class="ext" href="#slik" id="doneHow">Slik pakker og sender du kortene</a></p>
         <p class="fineprint">Spørsmål? Skriv til <b>kundeservice@pokenordic.no</b> og oppgi referansen.</p>
         <div class="actions">
-          <button class="btn" type="button" id="donePdf" hidden>Last ned kjøpsbevis</button>
-          <button class="btn ghost" type="button" id="doneReceipt">Se kjøpsbeviset</button>
+          <button class="btn" type="button" id="donePdf" hidden>Last ned tilbudsoversikt</button>
+          <button class="btn ghost" type="button" id="doneReceipt">Se tilbudsoversikten</button>
           <button class="linkbtn" type="button" id="newOffer">Start et nytt tilbud</button>
         </div>
       </div>
     </aside>
   </div>
 
-  <section class="receipt-wrap" id="receiptWrap" hidden aria-label="Kjøpsbevis">
+  <section class="receipt-wrap" id="receiptWrap" hidden aria-label="Foreløpig tilbud">
     <div class="receipt-bar">
-      <h2>Kjøpsbevis</h2>
+      <h2>Foreløpig tilbud</h2>
       <div class="receipt-actions">
         <button class="btn" type="button" id="pdfBtn" hidden>Last ned PDF</button>
         <button class="btn ghost" type="button" id="printBtn" hidden>Skriv ut</button>
@@ -500,8 +501,8 @@ a.ext { color: var(--accent); font-size: 13px; text-underline-offset: 2px; }
     <ol class="steps">
       <li><b>Send tilbud her på siden</b><span>Søk opp kortene, velg tilstand og send inn. Du får en referanse med en gang.</span></li>
       <li><b>Send kortene til oss</b><span>Pakk dem godt, legg ved en lapp med referansen og send med Posten med sporing. Er tilbudet over <span class="approvalAmount">10 000 kr</span>, venter du til vi har bekreftet det på e-post.</span></li>
-      <li><b>Vi kontrollerer kortene</b><span>Innen 1–3 virkedager etter at vi har mottatt dem, sender vi deg det endelige tilbudet på e-post.</span></li>
-      <li><b>Du godtar eller avslår</b><span>Avslår du, sender vi kortene tilbake. Da betaler du returfrakten.</span></li>
+      <li><b>Vi kontrollerer kortene</b><span>Innen 1–3 virkedager etter at vi har mottatt dem, sender vi deg det endelige tilbudet og kjøpsbeviset på e-post.</span></li>
+      <li><b>Du godtar eller avslår</b><span>Du godtar ved å trykke på lenken i e-posten og skrive navnet ditt. Avslår du, sender vi kortene tilbake, og du betaler returfrakten.</span></li>
       <li><b>Du får betalt</b><span>Utbetalingen starter samme dag som du godtar tilbudet.</span></li>
     </ol>
 
@@ -634,7 +635,7 @@ const CONFIG = {
 // Sjekken ser på adressen, ikke på window.claude, fordi nettleserutvidelser kan legge til det objektet på vanlige nettsider.
 const IN_CLAUDE = !/^https?:$/.test(location.protocol) || !location.hostname || /claude/i.test(location.hostname);
 const CAN_SUBMIT = !!CONFIG.submitUrl && !IN_CLAUDE;
-const SUBMIT_LABEL = CAN_SUBMIT ? "Send tilbudet" : "Lag tilbud og kjøpsbevis";
+const SUBMIT_LABEL = CAN_SUBMIT ? "Send tilbudet" : "Lag tilbud";
 const VARIANT_LABEL = { N: "Normal", H: "Holo", R: "Reverse Holo", "1": "1st Edition", "1H": "1st Edition Holo", U: "Unlimited", UH: "Unlimited Holo" };
 const STORE_KEY = "pkmn-buylist-v1";
 const $ = (id) => document.getElementById(id);
@@ -1211,7 +1212,8 @@ function renderReceipt(d) {
   const hasBulk = d.lines.some(({ L }) => L.bulk);
   const buyerLines = [b.name, b.orgnr ? "Org.nr. " + b.orgnr : "", b.address || ""].filter(Boolean).map(esc).join("<br>");
   $("receipt").innerHTML =
-    "<header><div><img src='logo.webp' alt='" + esc(b.name) + "'><h3>Kjøpsbevis</h3></div>" +
+    "<div class='draft'>Foreløpig tilbud – ikke et kjøpsbevis</div>" +
+    "<header><div><img src='logo.webp' alt='" + esc(b.name) + "'><h3>Tilbudsoversikt</h3></div>" +
     "<div class='refbox'><span>Referanse</span><b>#" + esc(d.ref) + "</b><span>Dato " + dateTxt + "</span></div></header>" +
     "<div class='parties'>" +
       "<div><span class='lbl'>Kjøper</span>" + buyerLines + "</div>" +
@@ -1219,15 +1221,13 @@ function renderReceipt(d) {
         (s.minor ? "<br><br><span class='lbl'>Foresatt</span>" + esc(s.guardianName) + "<br>" + esc(s.guardianContact) : "") + "</div>" +
     "</div>" +
     "<div class='tbl'><table><thead><tr><th>Varenr.</th><th>Kort</th><th>Tilstand</th><th class='num'>Antall</th><th class='num'>Pris/enhet</th><th class='num'>Sum</th></tr></thead>" +
-    "<tbody>" + rows + "</tbody><tfoot><tr><td colspan='3'>" + esc(countTxt(d.count, d.kg)) + "</td><td colspan='3' class='num'>Kjøpssum " + fmtKr(d.total) + "</td></tr></tfoot></table></div>" +
+    "<tbody>" + rows + "</tbody><tfoot><tr><td colspan='3'>" + esc(countTxt(d.count, d.kg)) + "</td><td colspan='3' class='num'>Estimert sum " + fmtKr(d.total) + "</td></tr></tfoot></table></div>" +
     "<div class='terms'>" +
-      "<span><b>Oppgjør:</b> " + (mode === "trade" ? "Innbytte, tilgode i nettbutikken (" + rateTxt(d) + " av markedspris)." : "Utbetaling (" + rateTxt(d) + " av markedspris).") + "</span>" +
+      "<span><b>Ønsket oppgjør:</b> " + (mode === "trade" ? "Innbytte, tilgode i nettbutikken (" + rateTxt(d) + " av markedspris)." : "Utbetaling (" + rateTxt(d) + " av markedspris).") + "</span>" +
       (hasBulk ? "<span>Bulk kjøpes som samlet parti etter vekt, med fast kilopris. Vekten kontrolleres ved mottak.</span>" : "") +
-      "<span>Kortene er kjøpt fra privatperson og videreselges etter avansemetoden (merverdiavgiftsloven § 4-6). Kjøpsbevis etter bokføringsforskriften § 8-10-3.</span>" +
-      "<span>Prisene er foreløpige til kortene er kontrollert. Endres antall eller pris ved kontrollen, lages et nytt kjøpsbevis før underskrift.</span>" +
-      "<span>Ved underskrift bekrefter selger at kortene er selgers eiendom, og at opplysningene over er riktige.</span>" +
-    "</div>" +
-    "<div class='signs'><div>Sted og dato</div><div>Selgers underskrift</div>" + (s.minor ? "<div>Foresattes underskrift</div>" : "") + "</div>";
+      "<span><b>Dette er et foreløpig tilbud, ikke et kjøpsbevis.</b> Prisene er estimater ut fra tilstanden du har oppgitt. Når vi har kontrollert kortene, får du det endelige tilbudet og kjøpsbeviset på e-post. Du godtar eller avslår ved å trykke på lenken i e-posten.</span>" +
+      "<span>Legg gjerne denne oversikten, eller en lapp med referansen, i pakken.</span>" +
+    "</div>";
   $("receiptWrap").hidden = false;
 }
 
@@ -1349,7 +1349,7 @@ function showResult(d, sent) {
     const steps = [];
     if (hold) steps.push(["Vent på bekreftelsen vår på e-post til ", d.seller.contact, "."]);
     steps.push([hold ? "Når du har fått bekreftelsen, sender du kortene til oss med en lapp med referansen." : "Send kortene til oss, med en lapp med referansen."]);
-    steps.push(["Innen 1–3 virkedager etter at vi har mottatt kortene, får du det endelige tilbudet på e-post" + (hold ? "." : " til "), hold ? "" : d.seller.contact, hold ? "" : "."]);
+    steps.push(["Innen 1–3 virkedager etter at vi har mottatt kortene, får du det endelige tilbudet og kjøpsbeviset på e-post" + (hold ? "." : " til "), hold ? "" : d.seller.contact, hold ? "" : "."]);
     steps.push([mode === "trade"
       ? "Godtar du, får du butikkreditten samme dag. Du kan også takke nei."
       : "Godtar du, starter utbetalingen samme dag (Vipps eller bank). Du kan også takke nei."]);
@@ -1376,7 +1376,7 @@ function showResult(d, sent) {
     $("formMsg").textContent = "";
   } else {
     st.append("Kopier teksten og send den til ", contact(), ".");
-    $("formMsg").textContent = "Kjøpsbeviset skrives under når vi har kontrollert kortene.";
+    $("formMsg").textContent = "Det endelige tilbudet og kjøpsbeviset får du på e-post når vi har kontrollert kortene.";
   }
   $("outText").hidden = sent === true;
   $("copyBtn").hidden = sent === true;
@@ -1479,7 +1479,7 @@ async function downloadReceipt(btn) {
     window.scrollTo(0, 0);
     await window.html2pdf().set({
       margin: [8, 8, 8, 8],
-      filename: "kjopsbevis-" + (CURRENT_DEAL ? CURRENT_DEAL.ref : "pokenordic") + ".pdf",
+      filename: "tilbud-" + (CURRENT_DEAL ? CURRENT_DEAL.ref : "pokenordic") + ".pdf",
       image: { type: "jpeg", quality: 0.95 },
       html2canvas: { scale: 2, backgroundColor: "#ffffff", useCORS: true, scrollX: 0, scrollY: 0 },
       jsPDF: { unit: "mm", format: "a4", orientation: "portrait" },

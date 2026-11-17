@@ -60,6 +60,35 @@ Tips:
 - Endrer du skriptet senere: **Distribuer → Administrer distribusjoner → rediger (blyant) → Versjon: Ny versjon → Distribuer**. Da beholder du samme adresse.
 - Innsending virker bare på den offentlige nettsiden, ikke inne i Claude-visningen. Der får selgeren en tekst å kopiere i stedet.
 
+## Endelig tilbud og kjøpsbevis
+
+Det selgeren laster ned fra portalen, er bare en **foreløpig tilbudsoversikt**. Det ekte kjøpsbeviset
+lages fra regnearket når du har kontrollert kortene, og selgeren signerer det elektronisk.
+
+**Arbeidsflyt for hvert kjøp:**
+1. Kortene kommer i posten. Kontroller dem.
+2. I fanen **Kort**, på radene med referansen:
+   - rett **Tilstand**, **Antall** og **Pris/stk (kr)** der det trengs (for bulk er Antall = kg),
+   - sett **Status** til `Avvist` på kort du ikke kjøper (de sendes tilbake).
+3. I fanen **Tilbud**: klikk på raden til tilbudet.
+4. Velg menyen **PokéNordic → Send endelig tilbud for valgt tilbud** og bekreft.
+   - Selgeren får e-post med endelig pris, kjøpsbevis (PDF) og knappene **Godta og signer** / **Avslå**.
+   - Kjøpsbeviset «til godkjenning» lagres i Google Drive-mappa **PokéNordic kjøpsbevis**.
+5. Selgeren godtar ved å skrive inn fullt navn (og foresattes navn hvis under 18) og hvor pengene skal betales.
+   - Status blir **Godtatt**, det signerte kjøpsbeviset lagres i samme mappe, og både du og selgeren får det på e-post.
+   - E-posten til deg sier hva som skal betales og til hvilket Vipps-nummer eller kontonummer.
+6. Når du har betalt: klikk på raden og velg **PokéNordic → Merk valgt tilbud som betalt**.
+
+Avslår selgeren, blir status **Avslått**, og du får e-post med adressen kortene skal sendes tilbake til.
+
+**Oppdatere skriptet til denne versjonen (én gang):**
+1. Lim inn hele den nye `google-apps-script/Code.gs` i Apps Script og trykk **Lagre**.
+2. **Distribuer → Administrer distribusjoner → blyant → Versjon: Ny versjon → Distribuer.** Adressen blir den samme.
+3. Google ber om nye tillatelser (Google Drive, for kjøpsbevisene). Godkjenn.
+4. Last inn regnearket på nytt. Menyen **PokéNordic** dukker opp øverst.
+
+Merk: E-postene til selgeren sendes fra Google-kontoen som eier skriptet. Svar fra selgeren går til kundeservice@pokenordic.no.
+
 ## Kjøre lokalt
 
 ```
