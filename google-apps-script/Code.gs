@@ -13,7 +13,7 @@
 
 // ======== INNSTILLINGER ========
 const OWNER_EMAIL = "kundeservice@pokenordic.no";  // her kommer tilbudene
-const SEND_SELLER_COPY = false;  // true = selgeren får en kopi av innsendt tilbud på e-post
+const SEND_SELLER_COPY = true;   // true = selgeren får en bekreftelse på e-post når tilbudet er sendt inn
 const SENDER_NAME = "PokéNordic innkjøp";
 // Avsenderadresse på e-postene. Må være lagt til som «Send e-post som» i Gmail-kontoen som eier skriptet
 // (se README). Er den ikke godkjent der ennå, sendes e-posten fra kontoens egen adresse som før.
@@ -21,7 +21,8 @@ const FROM_ADDRESS = "kundeservice@pokenordic.no";
 const BUYER = {
   name: "PokeNordic Hornberg",
   orgnr: "936 651 623 MVA",
-  address: "Vestneshaugen 35, 6390 Vestnes"
+  address: "Vestneshaugen 35, 6390 Vestnes",
+  phone: "+47 936 50 613"
 };
 const DRIVE_FOLDER = "PokéNordic kjøpsbevis";  // mappe i Google Drive for kjøpsbevis (lages automatisk)
 // Den offentlige nettapp-adressen (…/exec). Brukes i lenkene til selgeren. Må være satt:
@@ -522,14 +523,21 @@ function mailHtml_(d, forOwner) {
   const tdr = 'style="padding:6px 8px;border-bottom:1px solid #ddd;text-align:right;white-space:nowrap"';
   const rows = d.lines.map((l) =>
     "<tr><td " + td + "><code>" + esc_(l.nr) + "</code></td><td " + td + ">" + esc_(l.name) + "<br><small>" + esc_(l.set) + " · " + esc_(l.number) + " · " + esc_(l.variant) +
-    "</small></td><td " + td + ">" + esc_(l.cond) + "</td><td " + tdr + ">" + esc_(l.qty) + "</td><td " + tdr + ">" + kr_(l.each) + "</td><td " + tdr + ">" + kr_(l.sum) + "</td></tr>"
+    "</small></td><td " + td + ">" + esc_(l.cond) + "</td><td " + tdr + ">" + esc_(l.variant === "per kg" ? String(l.qty).replace(".", ",") + " kg" : l.qty) +
+    "</td><td " + tdr + ">" + kr_(l.each) + (l.variant === "per kg" ? "/kg" : "") + "</td><td " + tdr + ">" + kr_(l.sum) + "</td></tr>"
   ).join("");
   const hold = '<p style="background:#fff3e0;border:1px solid #f0a35a;padding:10px 12px;border-radius:6px">';
   const intro = forOwner
     ? (d.needsApproval ? hold + "<b>Krever godkjenning.</b> Selgeren har fått beskjed om å vente med å sende kortene til du har bekreftet tilbudet. Svar på denne e-posten for å godkjenne eller avslå.</p>" : "") +
       "<p><b>Nytt tilbud #" + esc_(d.ref) + "</b> fra innkjøpsportalen.</p>"
-    : "<p>Hei " + esc_(s.name) + "!</p><p>Takk for tilbudet. Vi har mottatt det med referanse <b>#" + esc_(d.ref) + "</b>. Prisene under er foreløpige til vi har kontrollert kortene.</p>" +
-      (d.needsApproval ? hold + "<b>Ikke send kortene ennå.</b> Vi går gjennom tilbudet og sender deg en bekreftelse på e-post før du sender.</p>" : "<p>Du kan sende kortene til oss nå. Legg ved en lapp med referansen.</p>");
+    : "<p>Hei " + esc_(s.name) + "!</p><p>Takk for tilbudet ditt! Vi har mottatt det med referanse <b>#" + esc_(d.ref) + "</b>.</p>" +
+      (d.needsApproval ? hold + "<b>Ikke send kortene ennå.</b> Vi går gjennom tilbudet og sender deg en bekreftelse på e-post før du sender.</p>"
+        : "<p>Du kan nå sende kortene til oss med Posten. Vi anbefaler sporet sending, for eksempel Liten Norgespakke. Legg gjerne ved en lapp med referansen <b>#" + esc_(d.ref) + "</b>.</p>" +
+          '<p style="background:#F2F6FC;border:1px solid #D6DFEC;padding:10px 12px;border-radius:6px"><b>Send til:</b><br>' + esc_(BUYER.name) + "<br>" + esc_(BUYER.address).replace(", ", "<br>") + (BUYER.phone ? "<br>" + esc_(BUYER.phone) : "") + "</p>") +
+      "<p>Når kortene kommer, dobbeltsjekker vi tilstanden. Stemmer den med det du har oppgitt, utbetaler vi etter estimatet. Er tilstanden bedre enn oppgitt, justerer vi tilbudet opp. " +
+      "Er den dårligere, får du et justert tilbud på e-post som du kan godta eller avslå før noe er avtalt.</p>" +
+      "<p><b>Dette har du sendt inn:</b></p>";
+  const closing = forOwner ? "" : "<p>Har du spørsmål, er det bare å svare på denne e-posten.</p><p>Med vennlig hilsen<br>PokéNordic</p>";
   const sellerBlock = forOwner
     ? "<p><b>Selger:</b> " + esc_(s.name) + "<br>" + esc_(s.street) + ", " + esc_(s.zip) + " " + esc_(s.city) + "<br>" + esc_(s.contact) +
       (s.minor ? "<br><b>Under 18 år.</b> Foresatt: " + esc_(s.guardianName) + " – " + esc_(s.guardianContact) : "<br>18 år eller eldre") + "</p>"
@@ -539,7 +547,7 @@ function mailHtml_(d, forOwner) {
     '<table style="border-collapse:collapse;font-size:13px"><thead><tr style="text-align:left"><th ' + td + ">Varenr.</th><th " + td + ">Kort</th><th " + td +
     ">Tilstand</th><th " + tdr + ">Antall</th><th " + tdr + ">Pris/stk</th><th " + tdr + ">Sum</th></tr></thead><tbody>" + rows + "</tbody></table>" +
     "<p><b>" + esc_(d.countText || d.count + " kort") + " · Estimert sum " + kr_(d.total) + "</b>" + (forOwner ? " (alternativt " + kr_(d.altTotal) + ")" : "") + "</p>" +
-    (s.note ? "<p><b>Kommentar:</b> " + esc_(s.note) + "</p>" : "") +
+    (s.note ? "<p><b>Kommentar:</b> " + esc_(s.note) + "</p>" : "") + closing +
     '<p style="color:#666;font-size:12px">Priser: TCGPlayer Market Price ' + esc_(d.pricesDate) + ", 1 USD = " + esc_(d.usdNok) + " NOK.</p></div>";
 }
 
