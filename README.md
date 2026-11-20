@@ -102,6 +102,11 @@ godkjent som «Send e-post som» i Gmail-kontoen som eier skriptet. Ellers sende
 
 Fra da av kommer alle e-poster fra skriptet fra kundeservice@pokenordic.no.
 
+## Planlagt
+
+- **Automatisk utlegging i Shopify:** Når et tilbud er godtatt og merket som betalt, legges kortene ut som produkter i nettbutikken, uten mva (avansemetoden).
+- **Avanse-logg:** Når kortene selges i Shopify, logges salgspris mot innkjøpspris per varenummer, så du ser hvor mye mva du skylder på avansen.
+
 ## Kjøre lokalt
 
 ```
