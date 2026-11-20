@@ -439,10 +439,10 @@ const RATE = 9.6005, CASH = 0.78, CAP = 5000;
 const pay = (usd, f = 1) => Math.round(usd * CASH * f * RATE * 100) / 100;
 const CONDS = [
   ["NM", "Near Mint", 1.00, "Som nytt. Skarpe hjørner, ingen riper."],
-  ["LP", "Lightly Played", 0.85, "Litt slitasje: små hvite prikker langs kantene eller lett slitte hjørner."],
-  ["MP", "Moderately Played", 0.70, "Tydelig slitasje: hvite kanter, slitte hjørner eller riper på forsiden."],
-  ["HP", "Heavily Played", 0.50, "Kraftig slitasje: mye hvitt på kantene, bretter eller krøll."],
-  ["DMG", "Damaged", 0.30, "Skadet: rifter, vannskade, store bretter eller skrift."]
+  ["LP", "Lightly Played", 0.80, "Litt slitasje: små hvite prikker langs kantene eller lett slitte hjørner."],
+  ["MP", "Moderately Played", 0.60, "Tydelig slitasje: hvite kanter, slitte hjørner eller riper på forsiden."],
+  ["HP", "Heavily Played", 0.45, "Kraftig slitasje: mye hvitt på kantene, bretter eller krøll."],
+  ["DMG", "Damaged", 0.25, "Skadet: rifter, vannskade, store bretter eller skrift."]
 ];
 // Kort og TCGPlayer-priser fra portalens cards.json (15. nov. 2026); bildene er klippet fra portalens bildeark
 const S151 = "SV: Scarlet & Violet 151";
@@ -465,7 +465,7 @@ const MEW = [
 ];
 const img = (id) => "--img:url(cards/" + id + ".webp)";
 const ITEMS = [
-  { id: 517045, n: "Charizard ex", s: "MEW · 199/165 · <i>LP</i> · Holo", p: pay(287.60, 0.85) },
+  { id: 517045, n: "Charizard ex", s: "MEW · 199/165 · <i>LP</i> · Holo", p: pay(287.60, 0.80) },
   { id: 517051, n: "Mew ex", s: "MEW · 205/165 · <i>NM</i> · Holo", p: pay(23.74) },
   { kg: true, n: "Bulk: Non-holo", s: "Sword &amp; Shield+ · <i>1,5 kg</i>", p: 105.00 }
 ];
@@ -689,7 +689,7 @@ const doneY = () => { const d = $("done"), si = $("sinner"), top = offTop(d, si)
 function reset() {
   setOv($("ovIntro"), 1); setOv($("ovFlow"), 0); setOv($("ovOut"), 0);
   ["pt0", "pt1", "pt2"].forEach((id) => $(id).classList.remove("on"));
-  $("pt0").textContent = kr(pay(23.74)); $("pt1").textContent = kr(pay(287.60, 0.85)); $("pt2").textContent = kr(pay(221.91));
+  $("pt0").textContent = kr(pay(23.74)); $("pt1").textContent = kr(pay(287.60, 0.80)); $("pt2").textContent = kr(pay(221.91));
   document.querySelectorAll(".fs").forEach((f) => f.classList.remove("on"));
   $("trackFill").style.width = "0%"; $("fnote").classList.remove("on");
   $("mCash").classList.add("on"); $("mTrade").classList.remove("on", "hot");
@@ -761,7 +761,7 @@ const SCENES = [
       const lp = row.querySelector('.cond[data-c="LP"]');
       await moveTo(lp, 550); await click(lp); setCond(row, c, "LP", false);
       cap("3", "Prisen regnes ut med en gang: markedspris × 78 % × tilstand × kurs");
-      const out = row.querySelector(".cout"), a = pay(c.usd), b = pay(c.usd, 0.85);
+      const out = row.querySelector(".cout"), a = pay(c.usd), b = pay(c.usd, 0.80);
       await tween(600, (k) => { out.textContent = kr(Math.round((a + (b - a) * k) * 100) / 100); });
       await wait(1600);
       const add = row.querySelector(".addbtn");

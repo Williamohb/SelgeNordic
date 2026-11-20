@@ -401,7 +401,7 @@ a.ext { color: var(--accent); font-size: 13px; text-underline-offset: 2px; }
 
       <section class="how" aria-label="Slik fungerer det">
         <div><b>Markedspris</b>TCGPlayer «Market Price» i USD for riktig variant (normal, holo, reverse holo, 1st edition).</div>
-        <div><b>Tilstand</b>Prosentsatsen gjelder Near Mint. Lavere tilstand gir trekk: LP 85 %, MP 70 %, HP 50 %, Damaged 30 % av NM-prisen.</div>
+        <div><b>Tilstand</b>Prosentsatsen gjelder Near Mint. Lavere tilstand gir trekk: LP 80 %, MP 60 %, HP 45 %, Damaged 25 % av NM-prisen.</div>
         <div><b>Foreløpig estimat</b>Endelig pris avtales når vi har sett kortene. Prisene er omregnet til NOK med Norges Banks kurs.</div>
       </section>
     </main>
@@ -599,10 +599,10 @@ const CONFIG = {
   shopUrl: null,                    // lenke til nettbutikken, f.eks. "https://pokenordic.no"
   conditions: [                     // trekk for tilstand, ganges med satsen over
     { code: "NM",  name: "Near Mint",         factor: 1.00, desc: "Som nytt. Skarpe hjørner, ingen riper. Høyst et par bittesmå hvite prikker på baksidekanten." },
-    { code: "LP",  name: "Lightly Played",    factor: 0.85, desc: "Litt slitasje: små hvite prikker langs kantene eller lett slitte hjørner. Ingen bretter eller krøll." },
-    { code: "MP",  name: "Moderately Played", factor: 0.70, desc: "Tydelig slitasje: hvite kanter, slitte hjørner, riper på forsiden eller en liten bulk." },
-    { code: "HP",  name: "Heavily Played",    factor: 0.50, desc: "Kraftig slitasje: mye hvitt på kantene, tydelige bretter eller krøll, merker på kortet." },
-    { code: "DMG", name: "Damaged",           factor: 0.30, desc: "Skadet: rifter, vannskade, store bretter, skrift eller klistremerkerester." }
+    { code: "LP",  name: "Lightly Played",    factor: 0.80, desc: "Litt slitasje: små hvite prikker langs kantene eller lett slitte hjørner. Ingen bretter eller krøll." },
+    { code: "MP",  name: "Moderately Played", factor: 0.60, desc: "Tydelig slitasje: hvite kanter, slitte hjørner, riper på forsiden eller en liten bulk." },
+    { code: "HP",  name: "Heavily Played",    factor: 0.45, desc: "Kraftig slitasje: mye hvitt på kantene, tydelige bretter eller krøll, merker på kortet." },
+    { code: "DMG", name: "Damaged",           factor: 0.25, desc: "Skadet: rifter, vannskade, store bretter, skrift eller klistremerkerester." }
   ],
   bulk: [                           // bulk per kilo: kr ved utbetaling / kr ved innbytte
     { id: "swsh-nonholo",  type: "Non-holo",         era: "Sword & Shield og nyere", cash: 70,  trade: 70 },
