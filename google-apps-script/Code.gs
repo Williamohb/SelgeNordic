@@ -27,7 +27,7 @@ const BUYER = {
 const DRIVE_FOLDER = "PokéNordic kjøpsbevis";  // mappe i Google Drive for kjøpsbevis (lages automatisk)
 // Den offentlige nettapp-adressen (…/exec). Brukes i lenkene til selgeren. Må være satt:
 // når menyen kjøres fra regnearket, gir Google ellers en intern adresse som selgeren ikke kan åpne.
-const WEBAPP_URL = "https://script.google.com/macros/s/AKfycbztuYAxSOWskMnvYkX-8nxBDgYKS9k_q9ymVKbKdJkCxIKKzZs1XnOs-JTFVZUYgoG34g/exec";
+const WEBAPP_URL = "https://script.google.com/macros/s/AKfycbyOrUEZMHXJOSA4ucmxWsHVLEwqXFM5vXmBnRpMGjryA_JTpCKbX8BMdy7_Ds5n5PKBeg/exec";
 const TZ = "Europe/Oslo";
 // ===============================
 
