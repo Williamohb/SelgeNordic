@@ -68,7 +68,18 @@ lages fra regnearket når du har kontrollert kortene, og selgeren signerer det e
 **Arbeidsflyt for hvert kjøp:**
 1. Kortene kommer i posten. Kontroller dem.
 2. I fanen **Kort**, på radene med referansen:
-   - rett **Tilstand**, **Antall** og **Pris/stk (kr)** der det trengs (for bulk er Antall = kg),
+   - la **Tilstand** stå. Den viser hva selgeren oppga.
+   - hver innsending har sin egen blå ramme, og annenhver innsending har lys blå bakgrunn.
+   - kryss av **Kontrollert** for hvert kort du har sjekket. Velger du justert tilstand, krysses det av automatisk.
+     Kontrollerte kort flyttes nederst i innsendingen og får grå tekst, så de som gjenstår, står øverst.
+     For eldre rader: velg **PokéNordic → Ordne fanen Kort** én gang.
+     Når du sender det endelige tilbudet, sier bekreftelsen fra hvor mange linjer som ikke er krysset av.
+   - velg **Justert tilstand** (NM, LP, MP, HP, DMG) i nedtrekkslista der kortet er i en annen tilstand, og rett
+     **Antall** der det trengs (for bulk er Antall = kg). **Pris/stk (kr)** og **Sum (kr)** regnes ut på nytt av seg
+     selv: markedspris (USD) × kursen og satsen fra tilbudet × tilstandstrekket (japanske kort får den japanske satsen).
+     Tømmer du Justert tilstand, går prisen tilbake til **Innsendt pris/stk (kr)**. Du kan også skrive Pris/stk selv.
+     Trekkene står både i `index.html` og øverst i `Code.gs` (`TILSTAND_FAKTOR`, `JP_SATS`); endrer du dem, endre begge.
+   - i e-posten med det endelige tilbudet står det «(du oppga NM)» ved kort med justert tilstand,
    - sett **Status** til `Avvist` på kort du ikke kjøper (de sendes tilbake).
 3. I fanen **Tilbud**: klikk på raden til tilbudet.
 4. Velg menyen **PokéNordic → Send endelig tilbud for valgt tilbud** og bekreft.
@@ -78,6 +89,7 @@ lages fra regnearket når du har kontrollert kortene, og selgeren signerer det e
    - Status blir **Godtatt**, det signerte kjøpsbeviset lagres i samme mappe, og både du og selgeren får det på e-post.
    - E-posten til deg sier hva som skal betales og til hvilket Vipps-nummer eller kontonummer.
 6. Når du har betalt: klikk på raden og velg **PokéNordic → Merk valgt tilbud som betalt**.
+   Da kan kortene legges ut i nettbutikken (se «Nettbutikken» under).
 
 Avslår selgeren, blir status **Avslått**, og du får e-post med adressen kortene skal sendes tilbake til.
 
@@ -102,10 +114,18 @@ godkjent som «Send e-post som» i Gmail-kontoen som eier skriptet. Ellers sende
 
 Fra da av kommer alle e-poster fra skriptet fra kundeservice@pokenordic.no.
 
-## Planlagt
+## Nettbutikken: utlegging og avanse-logg
 
-- **Automatisk utlegging i Shopify:** Når et tilbud er godtatt og merket som betalt, legges kortene ut som produkter i nettbutikken, uten mva (avansemetoden).
-- **Avanse-logg:** Når kortene selges i Shopify, logges salgspris mot innkjøpspris per varenummer, så du ser hvor mye mva du skylder på avansen.
+Når et tilbud er merket som betalt, legges kortene ut i Shopify fra fanen **Innkjøp** på PNordic-opplastingssiden,
+uten mva (avansemetoden). Oppsett og regler står i README-en i PNordic («Innkjøpte kort (avansemetoden)»).
+
+I regnearket gir det:
+- kolonnene **Shopify** («Lagt ut» eller «Backlog»), **Shopify-info** og **Solgt** i fanen «Kort»,
+- fanen **Avanse**: én rad per solgt avanse-kort (ordre, innkjøp, salg, avanse, mva 20 % av avansen, termin),
+- fanen **Avanse per termin**: summene per mva-termin. «MVA å betale» er beløpet til mva-meldingen.
+
+Nettbutikken snakker med regnearket gjennom nettappen, med en nøkkel du lager under
+**PokéNordic → Nøkkel for nettbutikken (PNordic)**. Nøkkelen lagres i skriptets egenskaper, ikke i koden.
 
 ## Kjøre lokalt
 

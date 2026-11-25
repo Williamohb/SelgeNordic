@@ -42,6 +42,10 @@ const CARD_HEADERS = [
   "Mottatt", "Referanse", "Varenr", "Kort", "Sett", "Nummer", "Variant", "Tilstand",
   "Antall", "Markedspris (USD)", "Pris/stk (kr)", "Sum (kr)", "TCGPlayer-ID", "Status"
 ];
+// «Tilstand» er det selgeren oppga. «Justert tilstand» fyller du inn når du kontrollerer kortet;
+// da regnes «Pris/stk (kr)» automatisk ut på nytt (se onEdit).
+// «Kontrollert» er en avkrysningsboks du bruker for å holde styr på hvilke kort du har sjekket.
+const CARD_EXTRA = ["Kontrollert", "Justert tilstand", "Innsendt pris/stk (kr)"];
 
 /* ======================================================================
    1. Mottak av tilbud fra portalen
@@ -50,6 +54,7 @@ const CARD_HEADERS = [
 function doPost(e) {
   try {
     const d = JSON.parse((e && e.postData && e.postData.contents) || "{}");
+    if (d.api) return api_(d);  // nettbutikken (PNordic), se del 4
     if (d.website) return json_({ ok: true, ref: d.ref }); // honningfelle mot roboter
     validate_(d);
 
@@ -70,7 +75,18 @@ function doPost(e) {
         now, d.ref, l.nr, l.name, l.set, l.number, l.variant, l.cond,
         l.qty, l.usd, l.each, l.sum, l.tcgId, "Ny"
       ].map(safe_));
-      if (rows.length) cards.getRange(cards.getLastRow() + 1, 1, rows.length, rows[0].length).setValues(rows);
+      if (rows.length) {
+        const start = cards.getLastRow() + 1;
+        cards.getRange(start, 1, rows.length, rows[0].length).setValues(rows);
+        // Ta vare på prisen selgeren fikk oppgitt, og gi «Justert tilstand» en nedtrekksliste
+        const c = cols_(cards, CARD_EXTRA);
+        cards.getRange(start, c["Innsendt pris/stk (kr)"], rows.length, 1).setValues(d.lines.map((l) => [l.each]));
+        condValidation_(cards.getRange(start, c["Justert tilstand"], rows.length, 1));
+        checkbox_(cards.getRange(start, c["Kontrollert"], rows.length, 1));
+        cards.getRange(start, c["Kontrollert"], rows.length, 1).setValues(rows.map(() => [false]));
+        // Gi den nye innsendingen sin egen ramme og farge
+        try { formatRef_(cards, c, d.ref); } catch (fmtErr) {}
+      }
     } finally {
       lock.releaseLock();
     }
@@ -101,21 +117,201 @@ function doPost(e) {
    2. Meny i regnearket: send endelig tilbud
    ====================================================================== */
 
+function condValidation_(range) {
+  const rule = SpreadsheetApp.newDataValidation()
+    .requireValueInList(Object.keys(TILSTAND_FAKTOR), true)
+    .setAllowInvalid(false)
+    .setHelpText("Velg tilstanden du fant ved kontroll. Pris/stk regnes ut på nytt. Tøm feltet for å gå tilbake til innsendt tilstand.")
+    .build();
+  range.setDataValidation(rule);
+}
+
+// Avkrysningsboks som ikke endrer verdier som allerede står der
+function checkbox_(range) {
+  range.setDataValidation(SpreadsheetApp.newDataValidation().requireCheckbox().build());
+}
+
+function num_(x) {
+  return Number(String(x == null ? "" : x).replace(/\s/g, "").replace(",", ".")) || 0;
+}
+
+/* ---------- Fanen «Kort»: én ramme per innsending, og sortering etter «Kontrollert» ---------- */
+
+const GROUP_COLORS = ["#FFFFFF", "#EEF4FD"];  // annenhver innsending får lys blå bakgrunn
+const GROUP_BORDER = "#1E6FDA";
+const CHECKED_FONT = "#8A94A6";               // kontrollerte kort vises med grå tekst
+const NORMAL_FONT = "#0F1A2E";
+
+// Sammenhengende rader med samme referanse = én innsending
+function groups_(sh, c) {
+  const last = sh.getLastRow();
+  if (last < 2) return [];
+  const refs = sh.getRange(2, c["Referanse"], last - 1, 1).getValues().map((r) => String(r[0]));
+  const out = [];
+  refs.forEach((ref, i) => {
+    const row = i + 2;
+    const prev = out[out.length - 1];
+    if (prev && prev.ref === ref) prev.last = row;
+    else if (ref) out.push({ ref: ref, first: row, last: row, index: out.length });
+  });
+  return out;
+}
+
+function formatGroup_(sh, c, g) {
+  const n = g.last - g.first + 1, w = sh.getLastColumn();
+  const range = sh.getRange(g.first, 1, n, w);
+  const checked = sh.getRange(g.first, c["Kontrollert"], n, 1).getValues().map((r) => r[0] === true);
+  range.setBackgrounds(checked.map(() => new Array(w).fill(GROUP_COLORS[g.index % 2])));
+  range.setFontColors(checked.map((ok) => new Array(w).fill(ok ? CHECKED_FONT : NORMAL_FONT)));
+  range.setBorder(true, true, true, true, false, false, GROUP_BORDER, SpreadsheetApp.BorderStyle.SOLID_MEDIUM);
+}
+
+function formatRef_(sh, c, ref) {
+  groups_(sh, c).filter((g) => g.ref === ref).forEach((g) => formatGroup_(sh, c, g));
+}
+
+// Ukontrollerte kort øverst i innsendingen, kontrollerte nederst (ellers i varenummer-rekkefølge)
+function sortRef_(sh, c, ref) {
+  groups_(sh, c).filter((g) => g.ref === ref).forEach((g) => {
+    const n = g.last - g.first + 1;
+    if (n < 2) return;
+    const box = sh.getRange(g.first, c["Kontrollert"], n, 1);
+    box.setValues(box.getValues().map((r) => [r[0] === true]));  // tomme bokser = false, så de sorteres riktig
+    sh.getRange(g.first, 1, n, sh.getLastColumn()).sort([
+      { column: c["Kontrollert"], ascending: true },
+      { column: c["Varenr"], ascending: true }
+    ]);
+  });
+}
+
+// Menyvalg: rydd hele fanen (sorter alle innsendinger og gi dem ramme og farge)
+function tidyCards() {
+  const sh = SpreadsheetApp.getActiveSpreadsheet().getSheetByName("Kort");
+  if (!sh || sh.getLastRow() < 2) return;
+  const c = cols_(sh, CARD_EXTRA);
+  checkbox_(sh.getRange(2, c["Kontrollert"], sh.getLastRow() - 1, 1));
+  const refs = [...new Set(groups_(sh, c).map((g) => g.ref))];
+  refs.forEach((ref) => sortRef_(sh, c, ref));
+  sh.getRange(2, 1, sh.getLastRow() - 1, sh.getLastColumn()).setBorder(false, false, false, false, false, false);
+  groups_(sh, c).forEach((g) => formatGroup_(sh, c, g));
+}
+
 function onOpen() {
+  // Sørg for at fanen Kort har de nye kolonnene og nedtrekkslista (også for eldre regneark)
+  try {
+    const sh = SpreadsheetApp.getActiveSpreadsheet().getSheetByName("Kort");
+    if (sh && sh.getLastRow() >= 2) {
+      const c = cols_(sh, CARD_EXTRA);
+      condValidation_(sh.getRange(2, c["Justert tilstand"], sh.getLastRow() - 1, 1));
+      checkbox_(sh.getRange(2, c["Kontrollert"], sh.getLastRow() - 1, 1));
+    }
+  } catch (err) {}
   SpreadsheetApp.getUi()
     .createMenu("PokéNordic")
     .addItem("Send endelig tilbud for valgt tilbud", "sendFinalOffer")
     .addItem("Merk valgt tilbud som betalt", "markPaid")
     .addSeparator()
+    .addItem("Ordne fanen Kort (ramme og sortering)", "tidyCards")
+    .addItem("Nøkkel for nettbutikken (PNordic)", "makeApiKey")
     .addItem("Slik fungerer det", "showHelp")
     .addToUi();
+}
+
+/* Tilstandstrekk og japanske satser, samme som CONFIG i index.html. Endrer du dem der, endre dem her også. */
+const TILSTAND_FAKTOR = { NM: 1.00, LP: 0.80, MP: 0.60, HP: 0.45, DMG: 0.25 };
+const TILSTAND_KODE = { "near mint": "NM", "lightly played": "LP", "moderately played": "MP", "heavily played": "HP", "damaged": "DMG" };
+const JP_SATS = { "Utbetaling": 0.72, "Innbytte": 0.80 };
+
+// «Tilstand» = det selgeren oppga (rør den ikke). «Justert tilstand» = det du fant ved kontroll.
+// Når du endrer Justert tilstand, Antall eller Pris/stk i fanen «Kort», regnes Pris/stk og Sum ut på nytt:
+//   Pris/stk = markedspris (USD) × kurs × sats × tilstandstrekk for justert tilstand,
+// med kursen og satsen fra tilbudet (japanske kort får den japanske satsen).
+// Tømmer du Justert tilstand, går prisen tilbake til innsendt pris. Bulk (per kg) får bare ny Sum.
+// Pris/stk du skriver selv, beholdes til du endrer justert tilstand igjen.
+function onEdit(e) {
+  try {
+    if (!e || !e.range) return;
+    const sh = e.range.getSheet();
+    if (sh.getName() !== "Kort") return;
+    const c = cols_(sh, CARD_EXTRA);
+    const fra = e.range.getColumn(), til = e.range.getLastColumn();
+    const berørt = (h) => c[h] && c[h] >= fra && c[h] <= til;
+    const nyTilstand = berørt("Justert tilstand");
+    const kontroll = berørt("Kontrollert");
+    if (!nyTilstand && !kontroll && !berørt("Antall") && !berørt("Pris/stk (kr)")) return;
+    const ss = sh.getParent();
+    const tilbud = {};
+    const sortRefs = new Set();  // innsendinger som skal sorteres og få ny farge etterpå
+    const r1 = Math.max(2, e.range.getRow()), r2 = e.range.getLastRow();
+    if (r2 < r1) return;
+    const data = sh.getRange(r1, 1, r2 - r1 + 1, sh.getLastColumn()).getValues();
+    data.forEach((r, i) => {
+      const rad = r1 + i;
+      const g = (h) => r[c[h] - 1];
+      const ref = String(g("Referanse"));
+      if (!ref) return;
+      let each = num_(g("Pris/stk (kr)"));
+      const bulk = String(g("Variant")) === "per kg";
+
+      if (nyTilstand && !bulk) {
+        // Ta vare på innsendt pris første gang (også for rader fra før denne versjonen)
+        let innsendt = g("Innsendt pris/stk (kr)");
+        if (innsendt === "" || innsendt === null) {
+          innsendt = each;
+          sh.getRange(rad, c["Innsendt pris/stk (kr)"]).setValue(innsendt);
+        }
+        const kode = tilstandKode_(g("Justert tilstand"));
+        if (!kode) {
+          each = num_(innsendt);  // tømt felt = tilbake til innsendt pris
+        } else {
+          const usd = num_(g("Markedspris (USD)"));
+          if (!(ref in tilbud)) {
+            const rowNum = findOfferRow_(ss, ref);
+            const ts = ss.getSheetByName("Tilbud"), tc = cols_(ts, []);
+            const v = rowNum ? ts.getRange(rowNum, 1, 1, ts.getLastColumn()).getValues()[0] : null;
+            tilbud[ref] = v ? { kurs: num_(v[tc["USD/NOK"] - 1]), sats: num_(v[tc["Sats"] - 1]), modus: String(v[tc["Oppgjør"] - 1]) } : null;
+          }
+          const o = tilbud[ref];
+          if (usd > 0 && o && o.kurs > 0 && o.sats > 0) {
+            const japansk = /\(japansk\)\s*$/i.test(String(g("Sett")));
+            const sats = japansk && JP_SATS[o.modus] ? JP_SATS[o.modus] : o.sats;
+            each = round2_(usd * sats * TILSTAND_FAKTOR[kode] * o.kurs);
+          } else {
+            // mangler markedspris eller tilbudsdata: skaler innsendt pris med forholdet mellom tilstandene
+            const fraKode = tilstandKode_(g("Tilstand"));
+            if (fraKode) each = round2_(num_(innsendt) * TILSTAND_FAKTOR[kode] / TILSTAND_FAKTOR[fraKode]);
+          }
+        }
+        sh.getRange(rad, c["Pris/stk (kr)"]).setValue(each);
+        if (kode) {
+          sh.getRange(rad, c["Kontrollert"]).setValue(true);  // justert tilstand = kortet er sjekket
+          sortRefs.add(ref);
+        }
+      }
+      if (kontroll) sortRefs.add(ref);
+      sh.getRange(rad, c["Sum (kr)"]).setValue(round2_(num_(g("Antall")) * each));
+    });
+    // Kontrollerte kort flyttes nederst i innsendingen og blir grå
+    sortRefs.forEach((ref) => { sortRef_(sh, c, ref); formatRef_(sh, c, ref); });
+  } catch (err) {
+    // en feil her skal aldri stoppe redigeringen i regnearket
+  }
+}
+
+// «LP», «lp» eller «Lightly Played» -> «LP». Ukjent eller tomt -> "".
+function tilstandKode_(t) {
+  const s = String(t == null ? "" : t).trim();
+  if (!s) return "";
+  if (TILSTAND_FAKTOR[s.toUpperCase()] != null) return s.toUpperCase();
+  return TILSTAND_KODE[s.toLowerCase()] || "";
 }
 
 function showHelp() {
   SpreadsheetApp.getUi().alert(
     "Slik sender du endelig tilbud",
     "1. Kontroller kortene.\n" +
-    "2. I fanen «Kort»: rett Tilstand, Antall og Pris/stk (kr) for referansen der det trengs. " +
+    "2. I fanen «Kort»: la «Tilstand» stå (det selgeren oppga). Velg «Justert tilstand» (NM, LP, MP, HP, DMG) der kortet er annerledes, og rett Antall der det trengs. " +
+    "Pris/stk og Sum regnes ut på nytt av seg selv; du kan også skrive Pris/stk selv. Tøm Justert tilstand for å gå tilbake til innsendt pris. " +
     "Kort du ikke kjøper, får Status «Avvist».\n" +
     "3. I fanen «Tilbud»: klikk på raden til tilbudet.\n" +
     "4. Velg PokéNordic → «Send endelig tilbud for valgt tilbud».\n\n" +
@@ -142,11 +338,13 @@ function sendFinalOffer() {
   if (!lines.length) { ui.alert("Fant ingen kort for #" + offer.ref + " i fanen «Kort» (eller alle er avvist)."); return; }
   const total = round2_(lines.reduce((s, l) => s + l.sum, 0));
 
+  const unchecked = lines.filter((l) => !l.checked).length;
   const answer = ui.alert(
     "Send endelig tilbud #" + offer.ref + "?",
     offer.name + " (" + offer.contact + ")\n" +
     lines.length + " linjer · " + offer.mode + "\n" +
     "Estimert: " + kr_(offer.estimate) + "\nEndelig: " + kr_(total) + "\n\n" +
+    (unchecked ? "⚠ " + unchecked + " av " + lines.length + " linjer er ikke krysset av som kontrollert.\n\n" : "✓ Alle linjene er kontrollert.\n\n") +
     "Selgeren får e-post med kjøpsbevis og lenke for å godta eller avslå.",
     ui.ButtonSet.YES_NO
   );
@@ -187,7 +385,164 @@ function markPaid() {
   const offer = readOffer_(ss, rowNum);
   if (offer.status !== "Godtatt") { ui.alert("Bare godtatte tilbud kan merkes som betalt. Status nå: " + offer.status); return; }
   setOffer_(ss, rowNum, { "Status": "Betalt" });
-  ui.alert("Tilbud #" + offer.ref + " er merket som betalt.");
+  ui.alert("Tilbud #" + offer.ref + " er merket som betalt.\n\nKortene kan nå lastes opp fra fanen «Innkjøp» på PNordic-opplastingssiden.");
+}
+
+/* ======================================================================
+   4. Nettbutikken (PNordic): betalte kort ut, status og salg inn
+   ====================================================================== */
+// PNordic-opplastingen henter kortene fra betalte tilbud, legger dem ut i Shopify uten mva (avansemetoden)
+// og skriver tilbake «Lagt ut» eller «Backlog» i fanen «Kort». Den nattlige avanse-loggen sender salgene
+// hit, og de lagres i fanen «Avanse» (oppsummert per termin i «Avanse per termin»).
+// Alt krever nøkkelen fra menyen PokéNordic → «Nøkkel for nettbutikken», som lagres i skriptets egenskaper.
+const SHOP_COLS = ["Shopify", "Shopify-info", "Solgt"];
+const AVANSE_HEADERS = ["Dato", "Ordre", "Linje-ID", "Varenr", "Kort", "Tilstand", "Antall", "Innkjøp (kr)",
+  "Salg (kr)", "Avanse (kr)", "MVA (kr)", "Termin", "Referanse"];
+const AVANSE_MVA = 0.20;  // avansen regnes inkludert mva: 25 % mva = 20 % av avansen
+const TERMIN_NAVN = ["jan–feb", "mar–apr", "mai–jun", "jul–aug", "sep–okt", "nov–des"];
+
+function makeApiKey() {
+  const ui = SpreadsheetApp.getUi();
+  const props = PropertiesService.getScriptProperties();
+  let key = props.getProperty("API_NOKKEL");
+  if (key) {
+    const a = ui.alert("Nøkkel for nettbutikken", "Det finnes allerede en nøkkel:\n\n" + key +
+      "\n\nVil du lage en ny? Da slutter den gamle å virke, og du må lime inn den nye i PNordic.", ui.ButtonSet.YES_NO);
+    if (a !== ui.Button.YES) return;
+  }
+  key = Utilities.getUuid().replace(/-/g, "") + Utilities.getUuid().replace(/-/g, "");
+  props.setProperty("API_NOKKEL", key);
+  ui.alert("Nøkkel for nettbutikken", "Lim denne inn som \"nokkel\" i innkjop-tilgang.json i PNordic " +
+    "(og som secret INNKJOP_NOKKEL på GitHub):\n\n" + key, ui.ButtonSet.OK);
+}
+
+function api_(d) {
+  const key = PropertiesService.getScriptProperties().getProperty("API_NOKKEL");
+  if (!key || String(d.key || "") !== key) return json_({ ok: false, error: "Feil nøkkel" });
+  const ss = SpreadsheetApp.getActiveSpreadsheet();
+  const lock = LockService.getScriptLock();
+  lock.waitLock(30000);
+  try {
+    if (d.api === "kort") return json_({ ok: true, kort: paidCards_(ss, d.bare) });
+    if (d.api === "status") return json_({ ok: true, oppdatert: setShopStatus_(ss, d.rader || []) });
+    if (d.api === "salg") return json_(Object.assign({ ok: true }, addSales_(ss, d.rader || [])));
+    return json_({ ok: false, error: "Ukjent handling: " + d.api });
+  } finally {
+    lock.releaseLock();
+  }
+}
+
+// Kort fra betalte tilbud som ikke er lagt ut. bare = "nye" (aldri forsøkt), "backlog" eller tomt (begge).
+function paidCards_(ss, bare) {
+  const offers = ss.getSheetByName("Tilbud"), sh = ss.getSheetByName("Kort");
+  if (!offers || !sh || offers.getLastRow() < 2 || sh.getLastRow() < 2) return [];
+  const oc = cols_(offers, []);
+  const paid = {};
+  offers.getRange(2, 1, offers.getLastRow() - 1, offers.getLastColumn()).getValues().forEach((r) => {
+    if (String(r[oc["Status"] - 1]).trim() === "Betalt") paid[String(r[oc["Referanse"] - 1])] = String(r[oc["Oppgjør"] - 1]);
+  });
+  const want = bare === "nye" ? [""] : bare === "backlog" ? ["Backlog"] : ["", "Backlog"];
+  const c = cols_(sh, SHOP_COLS);
+  const out = [];
+  sh.getRange(2, 1, sh.getLastRow() - 1, sh.getLastColumn()).getValues().forEach((r) => {
+    const g = (h) => (c[h] ? r[c[h] - 1] : "");
+    const ref = String(g("Referanse"));
+    if (!(ref in paid)) return;
+    if (/avvist/i.test(String(g("Status"))) || String(g("Variant")) === "per kg") return;
+    const shop = String(g("Shopify")).trim();
+    if (want.indexOf(shop) < 0) return;
+    const qty = num_(g("Antall"));
+    const tcg = String(g("TCGPlayer-ID")).trim();
+    if (!(qty > 0) || !/^\d+$/.test(tcg)) return;
+    const justert = c["Justert tilstand"] ? String(g("Justert tilstand")).trim() : "";
+    out.push({
+      nr: String(g("Varenr")), ref: ref, tcgId: Number(tcg), kort: String(g("Kort")), sett: String(g("Sett")),
+      nummer: String(g("Nummer")), variant: String(g("Variant")), tilstand: tilstandKode_(justert || g("Tilstand")) || "NM",
+      antall: Math.round(qty), innkjop: num_(g("Pris/stk (kr)")), shopify: shop, info: String(g("Shopify-info")), oppgjor: paid[ref]
+    });
+  });
+  return out;
+}
+
+// rader: [{ nr, status: "Lagt ut" | "Backlog" | "Feil", info }]. «Feil» lar Shopify-feltet stå tomt, så kortet prøves igjen.
+function setShopStatus_(ss, rader) {
+  const sh = ss.getSheetByName("Kort");
+  if (!sh || !rader.length || sh.getLastRow() < 2) return 0;
+  const c = cols_(sh, SHOP_COLS);
+  const nrs = sh.getRange(1, c["Varenr"], sh.getLastRow(), 1).getValues().map((r) => String(r[0]));
+  let n = 0;
+  rader.forEach((x) => {
+    const i = nrs.indexOf(String(x.nr));
+    const st = String(x.status || "");
+    if (i < 1 || ["Lagt ut", "Backlog", "Feil"].indexOf(st) < 0) return;
+    sh.getRange(i + 1, c["Shopify"]).setValue(st === "Feil" ? "" : st);
+    sh.getRange(i + 1, c["Shopify-info"]).setValue(safe_(String(x.info || "").slice(0, 500)));
+    n++;
+  });
+  return n;
+}
+
+// rader: [{ linjeId, ordre, dato, nr, antall, salg }] fra Shopify-ordrene. salg = hva kunden betalte for linjen (etter rabatt).
+// Innkjøpsprisen hentes fra fanen «Kort» (Pris/stk × antall). Linjer som er logget før, hoppes over.
+function addSales_(ss, rader) {
+  const av = sheet_(ss, "Avanse", AVANSE_HEADERS);
+  avanseSummary_(ss);
+  const ac = cols_(av, []);
+  const seen = {};
+  if (av.getLastRow() >= 2) av.getRange(2, ac["Linje-ID"], av.getLastRow() - 1, 1).getValues().forEach((r) => { seen[String(r[0])] = true; });
+  const sh = ss.getSheetByName("Kort");
+  const c = sh ? cols_(sh, SHOP_COLS) : {};
+  const byNr = {};
+  if (sh && sh.getLastRow() >= 2) {
+    sh.getRange(2, 1, sh.getLastRow() - 1, sh.getLastColumn()).getValues().forEach((r, i) => {
+      byNr[skuNr_(r[c["Varenr"] - 1])] = { row: i + 2, r: r };
+    });
+  }
+  const nye = [], ukjente = [];
+  let fantes = 0;
+  rader.forEach((x) => {
+    const id = String(x.linjeId || "");
+    if (!id) return;
+    if (seen[id]) { fantes++; return; }
+    const hit = byNr[skuNr_(x.nr)];
+    if (!hit) { ukjente.push(String(x.nr)); return; }
+    const g = (h) => (c[h] ? hit.r[c[h] - 1] : "");
+    const antall = Number(x.antall) || 0;
+    const salg = round2_(Number(x.salg) || 0);
+    const innkjop = round2_(num_(g("Pris/stk (kr)")) * antall);
+    const avanse = round2_(salg - innkjop);
+    const dato = new Date(x.dato);
+    nye.push([dato, safe_(String(x.ordre || "")), id, String(g("Varenr")), String(g("Kort")),
+      tilstandKode_(String(g("Justert tilstand") || "").trim() || g("Tilstand")), antall, innkjop, salg, avanse,
+      round2_(Math.max(0, avanse) * AVANSE_MVA), termin_(dato), String(g("Referanse"))]);
+    seen[id] = true;
+    const solgt = num_(g("Solgt")) + antall;
+    sh.getRange(hit.row, c["Solgt"]).setValue(solgt);
+    hit.r[c["Solgt"] - 1] = solgt;
+  });
+  if (nye.length) av.getRange(av.getLastRow() + 1, 1, nye.length, nye[0].length).setValues(nye);
+  return { lagtTil: nye.length, fantes: fantes, ukjente: ukjente };
+}
+
+// Varenr slik det står i SKU-en: «ABCDE-03–05» blir «ABCDE-03_05» (SKU-er bør ikke ha tankestrek)
+function skuNr_(nr) {
+  return String(nr == null ? "" : nr).trim().toUpperCase().replace(/[–—]/g, "_");
+}
+
+// Mva-terminer på to måneder: «2026 T6 (nov–des)»
+function termin_(d) {
+  const ym = Utilities.formatDate(d, TZ, "yyyy-M").split("-");
+  const t = Math.floor((Number(ym[1]) - 1) / 2);
+  return ym[0] + " T" + (t + 1) + " (" + TERMIN_NAVN[t] + ")";
+}
+
+function avanseSummary_(ss) {
+  if (ss.getSheetByName("Avanse per termin")) return;
+  const sh = ss.insertSheet("Avanse per termin");
+  sh.getRange(1, 1).setFormula('=QUERY(Avanse!A:M, "select L, count(C), sum(G), sum(H), sum(I), sum(J), sum(K) ' +
+    "where L is not null group by L order by L label count(C) 'Salgslinjer', sum(G) 'Kort solgt', sum(H) 'Innkjøp (kr)', " +
+    "sum(I) 'Salg (kr)', sum(J) 'Avanse (kr)', sum(K) 'MVA å betale (kr)'\", 1)");
+  sh.getRange(1, 9).setValue("MVA = 20 % av avansen per kort (salg − innkjøp). Kort med negativ avanse gir 0 kr og trekkes ikke fra de andre.");
 }
 
 /* ======================================================================
@@ -359,10 +714,13 @@ function readLines_(ss, ref, writeBack) {
     const each = Number(String(g("Pris/stk (kr)")).replace(",", ".")) || 0;
     const sum = round2_(qty * each);
     if (writeBack && Number(g("Sum (kr)")) !== sum) sh.getRange(i + 1, c["Sum (kr)"]).setValue(sum);
+    const given = String(g("Tilstand"));
+    const adjusted = c["Justert tilstand"] && String(g("Variant")) !== "per kg" ? String(g("Justert tilstand")).trim() : "";
     out.push({
       nr: String(g("Varenr")), name: String(g("Kort")), set: String(g("Sett")), number: String(g("Nummer")),
-      variant: String(g("Variant")), cond: String(g("Tilstand")), qty: qty, each: each, sum: sum,
-      bulk: String(g("Variant")) === "per kg"
+      variant: String(g("Variant")), cond: adjusted || given, givenCond: given, changed: !!adjusted && adjusted.toUpperCase() !== given.toUpperCase(),
+      checked: c["Kontrollert"] ? g("Kontrollert") === true || String(g("Kontrollert")).toUpperCase() === "TRUE" : false,
+      qty: qty, each: each, sum: sum, bulk: String(g("Variant")) === "per kg"
     });
   }
   return out;
@@ -436,6 +794,7 @@ function summary_(o, lines, total) {
   const tdr = 'style="padding:6px 8px;border-bottom:1px solid #ddd;text-align:right;white-space:nowrap;font-size:13px"';
   return '<table style="border-collapse:collapse;width:100%;max-width:640px">' + lines.map((l) =>
     "<tr><td " + td + ">" + esc_(l.name) + '<br><span style="color:#666;font-size:12px">' + esc_([l.set, l.number].filter(String).join(" · ")) + " · " + esc_(l.cond) +
+    (l.changed ? " (du oppga " + esc_(l.givenCond) + ")" : "") +
     "</span></td><td " + tdr + ">" + esc_(l.bulk ? String(l.qty).replace(".", ",") + " kg" : l.qty + " stk") + "</td><td " + tdr + ">" + kr_(l.sum) + "</td></tr>").join("") +
     "</table><p><b>" + (o.mode === "Utbetaling" ? "Utbetaling" : "Butikkreditt") + ": " + kr_(total) + "</b></p>";
 }
