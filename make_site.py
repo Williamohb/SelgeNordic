@@ -30,6 +30,11 @@ def main():
         shutil.copy(f, os.path.join("_site", f))
     for d in ("img", "img-jp"):
         shutil.copytree(d, os.path.join("_site", d))
+    # Settlogoer (build_setlogos.py). Mangler de, viser settoversikten bare navnene.
+    if os.path.isdir("setlogos"):
+        shutil.copytree("setlogos", os.path.join("_site", "setlogos"))
+    if os.path.exists("setlogos.json"):
+        shutil.copy("setlogos.json", os.path.join("_site", "setlogos.json"))
     # Produktbilder til Shopify-import (lages av lag_shopify_csv.py)
     if os.path.isdir("produktbilder"):
         shutil.copytree("produktbilder", os.path.join("_site", "produktbilder"))

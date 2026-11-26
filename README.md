@@ -11,7 +11,9 @@ Til slutt lager de en tilbudstekst som de sender deg.
 | `index.html` | Selve portalen. Innstillinger (satser, tilstandstrekk, bulkpriser, kontaktinfo) står i `CONFIG` øverst i skriptet. |
 | `build_data.py` | Henter alle engelske og japanske kort og priser fra tcgcsv.com (TCGPlayer-data) og kursen fra Norges Bank → `cards.json` og `cards-jp.json` |
 | `build_images.py` | Laster ned kortbilder og lager ett bildeark per sett → `img/` (engelske) og `img-jp/` (japanske) |
+| `build_setlogos.py` | Henter settlogoer fra pokemontcg.io til settoversikten → `setlogos/` og `setlogos.json` (engelske sett) |
 | `make_site.py` | Setter sammen nettsiden i `_site/` |
+| `forhandsvis.py` | Lokal forhåndsvisning på <http://localhost:8791> som laster siden på nytt når `index.html` endres |
 | `.github/workflows/pages.yml` | Kjører alt over hver natt og publiserer på GitHub Pages |
 | `google-apps-script/Code.gs` | Tar imot tilbud fra portalen, lagrer dem i Google Regneark og sender e-post |
 
@@ -113,6 +115,20 @@ godkjent som «Send e-post som» i Gmail-kontoen som eier skriptet. Ellers sende
 6. Lim inn den nye `Code.gs`, trykk **Lagre**, og distribuer **Ny versjon**. Godkjenn den nye Gmail-tillatelsen.
 
 Fra da av kommer alle e-poster fra skriptet fra kundeservice@pokenordic.no.
+
+## Portalen inne i nettbutikken (pokenordic.no/pages/selg)
+
+Portalen kan vises som en side i Shopify-butikken, med butikkens meny og bunn rundt. Butikksiden laster
+`https://selg.pokenordic.no/?i=butikk` i en ramme som fyller skjermen under menyen. Med `?i=butikk` skjuler
+portalen sin egen logolinje og knappen «Til nettbutikken». Portalen oppdateres fortsatt bare her.
+
+1. Shopify: **Nettbutikk → Temaer → Tilpass**. Velg **Sider** øverst, og **Opprett mal**. Kall den `selg` og baser den på standard sidemal.
+2. I den nye malen: fjern seksjonen med sidens tittel og innhold, og **Legg til seksjon → Egendefinert Liquid**.
+   Lim inn hele innholdet i `shopify/selg-side.liquid`. Sett topp- og bunnmarg på seksjonen til 0, og trykk **Lagre**.
+3. **Nettbutikk → Sider → Legg til side**: tittel «Selg kort», nettadresse `selg`, og velg malen **selg** til høyre. Lagre.
+4. Lim inn den nye `shopify/header.liquid` i temaet (Rediger kode → header). «Selg til oss» i menyen går da til `/pages/selg`.
+
+`shopify/` ligger ikke i det offentlige repoet. selg.pokenordic.no virker fortsatt alene, for eksempel for lenker i Facebook-grupper.
 
 ## Nettbutikken: utlegging og avanse-logg
 

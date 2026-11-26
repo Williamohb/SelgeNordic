@@ -278,7 +278,7 @@ function onEdit(e) {
             each = round2_(usd * sats * TILSTAND_FAKTOR[kode] * o.kurs);
           } else {
             // mangler markedspris eller tilbudsdata: skaler innsendt pris med forholdet mellom tilstandene
-            const fraKode = tilstandKode_(g("Tilstand"));
+            const fraKode = tilstandKode_(g("Tilstand")) || (/usikker/i.test(String(g("Tilstand"))) ? "LP" : "");  // «Usikker» er priset som LP
             if (fraKode) each = round2_(num_(innsendt) * TILSTAND_FAKTOR[kode] / TILSTAND_FAKTOR[fraKode]);
           }
         }
@@ -337,6 +337,16 @@ function sendFinalOffer() {
   const lines = readLines_(ss, offer.ref, true);
   if (!lines.length) { ui.alert("Fant ingen kort for #" + offer.ref + " i fanen «Kort» (eller alle er avvist)."); return; }
   const total = round2_(lines.reduce((s, l) => s + l.sum, 0));
+
+  // «Usikker»: selgeren lot oss vurdere tilstanden. Da må Justert tilstand være satt før tilbudet går ut.
+  const uvurdert = lines.filter((l) => !l.bulk && !tilstandKode_(l.cond));
+  if (uvurdert.length) {
+    ui.alert("Tilstanden mangler",
+      uvurdert.length + " kort har tilstand «" + uvurdert[0].cond + "» og må vurderes først:\n\n" +
+      uvurdert.slice(0, 15).map((l) => "• " + l.nr + " " + l.name).join("\n") + (uvurdert.length > 15 ? "\n…" : "") +
+      "\n\nVelg Justert tilstand (NM, LP, MP, HP, DMG) på dem i fanen «Kort», og send igjen.", ui.ButtonSet.OK);
+    return;
+  }
 
   const unchecked = lines.filter((l) => !l.checked).length;
   const answer = ui.alert(
@@ -457,7 +467,9 @@ function paidCards_(ss, bare) {
     const justert = c["Justert tilstand"] ? String(g("Justert tilstand")).trim() : "";
     out.push({
       nr: String(g("Varenr")), ref: ref, tcgId: Number(tcg), kort: String(g("Kort")), sett: String(g("Sett")),
-      nummer: String(g("Nummer")), variant: String(g("Variant")), tilstand: tilstandKode_(justert || g("Tilstand")) || "NM",
+      // «Usikker» uten Justert tilstand gir tom tilstand: opplastingen nekter da å legge ut kortet
+      nummer: String(g("Nummer")), variant: String(g("Variant")),
+      tilstand: tilstandKode_(justert || g("Tilstand")) || (/usikker/i.test(String(g("Tilstand"))) ? "" : "NM"),
       antall: Math.round(qty), innkjop: num_(g("Pris/stk (kr)")), shopify: shop, info: String(g("Shopify-info")), oppgjor: paid[ref]
     });
   });
@@ -794,7 +806,7 @@ function summary_(o, lines, total) {
   const tdr = 'style="padding:6px 8px;border-bottom:1px solid #ddd;text-align:right;white-space:nowrap;font-size:13px"';
   return '<table style="border-collapse:collapse;width:100%;max-width:640px">' + lines.map((l) =>
     "<tr><td " + td + ">" + esc_(l.name) + '<br><span style="color:#666;font-size:12px">' + esc_([l.set, l.number].filter(String).join(" · ")) + " · " + esc_(l.cond) +
-    (l.changed ? " (du oppga " + esc_(l.givenCond) + ")" : "") +
+    (l.changed ? (/usikker/i.test(l.givenCond) ? " (vurdert av oss)" : " (du oppga " + esc_(l.givenCond) + ")") : "") +
     "</span></td><td " + tdr + ">" + esc_(l.bulk ? String(l.qty).replace(".", ",") + " kg" : l.qty + " stk") + "</td><td " + tdr + ">" + kr_(l.sum) + "</td></tr>").join("") +
     "</table><p><b>" + (o.mode === "Utbetaling" ? "Utbetaling" : "Butikkreditt") + ": " + kr_(total) + "</b></p>";
 }
@@ -880,11 +892,16 @@ function mailHtml_(d, forOwner) {
   const s = d.seller;
   const td = 'style="padding:6px 8px;border-bottom:1px solid #ddd;vertical-align:top"';
   const tdr = 'style="padding:6px 8px;border-bottom:1px solid #ddd;text-align:right;white-space:nowrap"';
+  // «Usikker»: portalen sender spennet DMG–NM (lo/hi = linjesum), som vises i stedet for arbeidsprisen
+  const spenn = (lo, hi) => kr_(hi).replace(/\s*kr$/, "") + " – " + kr_(lo);  // høyeste (NM) først, som i portalen
+  const harSpenn = (l) => l.lo != null && l.hi != null && Math.abs(l.hi - l.lo) >= 0.01;
   const rows = d.lines.map((l) =>
     "<tr><td " + td + "><code>" + esc_(l.nr) + "</code></td><td " + td + ">" + esc_(l.name) + "<br><small>" + esc_(l.set) + " · " + esc_(l.number) + " · " + esc_(l.variant) +
     "</small></td><td " + td + ">" + esc_(l.cond) + "</td><td " + tdr + ">" + esc_(l.variant === "per kg" ? String(l.qty).replace(".", ",") + " kg" : l.qty) +
-    "</td><td " + tdr + ">" + kr_(l.each) + (l.variant === "per kg" ? "/kg" : "") + "</td><td " + tdr + ">" + kr_(l.sum) + "</td></tr>"
+    "</td><td " + tdr + ">" + (harSpenn(l) ? spenn(l.lo / l.qty, l.hi / l.qty) : kr_(l.each) + (l.variant === "per kg" ? "/kg" : "")) +
+    "</td><td " + tdr + ">" + (harSpenn(l) ? spenn(l.lo, l.hi) : kr_(l.sum)) + "</td></tr>"
   ).join("");
+  const totalSpenn = d.totalLo != null && d.totalHi != null && Math.abs(d.totalHi - d.totalLo) >= 0.01;
   const hold = '<p style="background:#fff3e0;border:1px solid #f0a35a;padding:10px 12px;border-radius:6px">';
   const intro = forOwner
     ? (d.needsApproval ? hold + "<b>Krever godkjenning.</b> Selgeren har fått beskjed om å vente med å sende kortene til du har bekreftet tilbudet. Svar på denne e-posten for å godkjenne eller avslå.</p>" : "") +
@@ -905,7 +922,9 @@ function mailHtml_(d, forOwner) {
     "<p><b>Oppgjør:</b> " + esc_(d.modeName) + " (" + Math.round(d.rate * 100) + " % av markedspris)</p>" +
     '<table style="border-collapse:collapse;font-size:13px"><thead><tr style="text-align:left"><th ' + td + ">Varenr.</th><th " + td + ">Kort</th><th " + td +
     ">Tilstand</th><th " + tdr + ">Antall</th><th " + tdr + ">Pris/stk</th><th " + tdr + ">Sum</th></tr></thead><tbody>" + rows + "</tbody></table>" +
-    "<p><b>" + esc_(d.countText || d.count + " kort") + " · Estimert sum " + kr_(d.total) + "</b>" + (forOwner ? " (alternativt " + kr_(d.altTotal) + ")" : "") + "</p>" +
+    "<p><b>" + esc_(d.countText || d.count + " kort") + " · Estimert sum " + (totalSpenn ? spenn(d.totalLo, d.totalHi) : kr_(d.total)) + "</b>" +
+      (forOwner ? " (alternativt " + kr_(d.altTotal) + (totalSpenn ? "; i regnearket står LP-pris for «Usikker», " + kr_(d.total) + " totalt" : "") + ")" : "") + "</p>" +
+    (totalSpenn ? "<p>Kort merket «Usikker» vurderer " + (forOwner ? "du" : "vi") + " når kortene kommer. Prisen er et spenn fra Near Mint til Damaged, og endelig pris står i tilbudet.</p>" : "") +
     (s.note ? "<p><b>Kommentar:</b> " + esc_(s.note) + "</p>" : "") + closing +
     '<p style="color:#666;font-size:12px">Priser: TCGPlayer Market Price ' + esc_(d.pricesDate) + ", 1 USD = " + esc_(d.usdNok) + " NOK.</p></div>";
 }
