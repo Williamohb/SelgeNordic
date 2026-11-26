@@ -116,6 +116,12 @@ godkjent som «Send e-post som» i Gmail-kontoen som eier skriptet. Ellers sende
 
 Fra da av kommer alle e-poster fra skriptet fra kundeservice@pokenordic.no.
 
+## Utseende
+
+Portalen ser ut som nettbutikken: samme toppstripe, meny, bunn, farger og skrift (butikkstilen, se `.butikkstil`
+i `index.html`). Den gamle utgaven med egen logolinje og lys/mørk modus etter systemet finnes på
+`selg.pokenordic.no/?stil=standard`.
+
 ## Portalen inne i nettbutikken (pokenordic.no/pages/selg)
 
 Portalen kan vises som en side i Shopify-butikken, med butikkens meny og bunn rundt. Butikksiden laster

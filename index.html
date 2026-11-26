@@ -159,7 +159,7 @@ h1 { font-family: var(--font-display); font-weight: 800; font-size: clamp(30px, 
 .cprice small { color: var(--muted); font-size: 13px; font-family: var(--font-body); }
 .empty { padding: 32px 24px; text-align: center; color: var(--muted); background: var(--surface); border: 1px dashed var(--line-strong); border-radius: var(--radius); }
 
-/* ======== Butikkstil (prøve: ?stil=butikk): samme topp, bunn og farger som pokenordic.no ======== */
+/* ======== Butikkstil (standard; ?stil=standard gir den gamle): samme topp, bunn og farger som pokenordic.no ======== */
 .butikkstil {
   --bg: #FFFFFF; --surface: #FFFFFF; --sunk: #F2F6FC; --ink: #0B2545; --muted: #4A5B75;
   --line: #DCE6F4; --line-strong: #C5D4EA; --accent: #1E6FD9; --accent-hover: #185EBC; --accent-ink: #FFFFFF; --accent-soft: #EAF2FD;
@@ -1060,15 +1060,18 @@ const CAN_SUBMIT = !!CONFIG.submitUrl && !IN_CLAUDE;
 const I_BUTIKKEN = new URLSearchParams(location.search).get("i") === "butikk";
 if (I_BUTIKKEN) document.documentElement.classList.add("i-butikken");
 
-// Butikkstil (prøve, ?stil=butikk): nettbutikkens topp, meny, bunn og farger rundt portalen.
-// Lenkene går til pokenordic.no. Brukes ikke når portalen allerede vises inne i butikken.
-const BUTIKKSTIL = !I_BUTIKKEN && new URLSearchParams(location.search).get("stil") === "butikk";
+// Butikkstil (standard): nettbutikkens farger, og topp, meny og bunn rundt portalen. Lenkene går til pokenordic.no.
+// ?stil=standard gir den gamle portalen (egen logolinje, lys/mørk etter systemet).
+// Inne i nettbutikken (?i=butikk) brukes fargene, men ikke topp og bunn, siden butikken har sine egne.
+const BUTIKKSTIL = new URLSearchParams(location.search).get("stil") !== "standard";
 if (BUTIKKSTIL) {
-  const B = "https://pokenordic.no";
   const html = document.documentElement;
   html.classList.add("butikkstil");
   if (new URLSearchParams(location.search).get("ruter") === "lys") html.classList.add("lyse-ruter");
   html.dataset.theme = "light";
+}
+if (BUTIKKSTIL && !I_BUTIKKEN) {
+  const B = "https://pokenordic.no";
   const ikon = {
     sok: '<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" aria-hidden="true"><circle cx="11" cy="11" r="7"/><path d="m20 20-3.5-3.5"/></svg>',
     bruker: '<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="8" r="4"/><path d="M4 21c1.5-4 4.5-6 8-6s6.5 2 8 6"/></svg>',
