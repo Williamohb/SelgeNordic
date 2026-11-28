@@ -665,6 +665,15 @@ a.ext { color: var(--accent); font-size: 14px; text-underline-offset: 3px; }
 .sendto b { user-select: all; }
 .sendto.bad { background: color-mix(in srgb, var(--warn) 10%, var(--surface)); border-color: color-mix(in srgb, var(--warn) 40%, var(--line)); }
 .slip.locked .item .ctl { display: none; }
+.slip.locked .slip-tools { display: none; }
+.slip-tools { padding: 8px 24px 12px; display: flex; justify-content: flex-end; }
+.slip-tools #clearList { font-size: 13px; color: var(--muted); }
+.slip-tools #clearList:hover { color: var(--warn); }
+.clear-confirm { width: 100%; display: grid; gap: 8px; padding: 12px; border-radius: var(--radius-s);
+                 background: color-mix(in srgb, var(--warn) 9%, var(--surface)); border: 1px solid color-mix(in srgb, var(--warn) 40%, var(--line)); font-size: 14px; }
+.clear-confirm .rad { display: flex; flex-wrap: wrap; gap: 8px; }
+.btn.danger, .butikkstil .btn.danger { background: var(--warn); border-color: var(--warn); color: #FFFFFF; }
+@media (hover: hover) and (pointer: fine) { .btn.danger:not(:disabled):hover, .butikkstil .btn.danger:not(:disabled):hover { background: color-mix(in srgb, var(--warn) 85%, #000); border-color: color-mix(in srgb, var(--warn) 85%, #000); } }
 .done { padding: 24px; border-top: 1.5px dashed var(--line-strong); display: grid; gap: 12px; }
 .done-mark { width: 48px; height: 48px; border-radius: 50%; display: grid; place-items: center; background: var(--good); color: var(--surface); }
 .done h3 { font-family: var(--font-display); font-weight: 800; font-size: 26px; margin: 0; letter-spacing: -0.02em; }
@@ -912,6 +921,14 @@ ol.steps span { font-size: 14px; color: var(--muted); }
     <aside class="slip" id="slip" aria-label="Ditt tilbud">
       <div class="slip-head"><h2>Ditt tilbud</h2><span id="slipCount">0 kort</span></div>
       <ul class="items" id="items"></ul>
+      <!-- Tøm lista: liten lenke for seg selv, og to trinn (bekreft eller avbryt), så den ikke trykkes på ved et uhell -->
+      <div class="slip-tools" id="slipTools" hidden>
+        <button type="button" class="linkbtn" id="clearList">Tøm lista</button>
+        <div class="clear-confirm" id="clearConfirm" hidden role="alert">
+          <span id="clearText">Fjerne alle kortene fra tilbudet?</span>
+          <span class="rad"><button type="button" class="btn small danger" id="clearYes">Ja, tøm lista</button><button type="button" class="btn ghost small" id="clearNo">Avbryt</button></span>
+        </div>
+      </div>
       <div class="slip-empty" id="slipEmpty">Ingen kort ennå. Søk opp et kort, velg tilstand og trykk <b>Legg til</b>.</div>
       <div class="total"><span id="totalLabel">Estimert utbetaling</span><b id="total">0,00 kr</b></div>
       <div class="alt" id="alt" hidden><span id="altText"></span><button type="button" class="linkbtn" id="altSwitch"></button></div>
@@ -2095,6 +2112,8 @@ function renderOffer() {
     $("altSwitch").textContent = "Velg utbetaling";
   }
   $("slipEmpty").hidden = offer.length > 0;
+  $("slipTools").hidden = offer.length === 0;
+  if (!offer.length) lukkTøm();
   ul.hidden = offer.length === 0;
   $("makeBtn").disabled = offer.length === 0;
   $("makeBtn").textContent = SUBMIT_LABEL;
@@ -2363,6 +2382,20 @@ $("copyBtn").addEventListener("click", () => {
     navigator.clipboard.writeText(txt).then(() => { $("toast").textContent = "Kopiert. Lim inn i e-post eller melding."; }, fallback);
   } catch (e) { fallback(); }
 });
+// «Tøm lista» i tilbudslappen: første trykk viser en bekreftelse med antall kort; bare «Ja, tøm lista» tømmer.
+// Bekreftelsen lukker seg selv etter 8 sekunder.
+let tømTid;
+function lukkTøm() { clearTimeout(tømTid); $("clearConfirm").hidden = true; $("clearList").hidden = false; }
+$("clearList").addEventListener("click", () => {
+  const n = offer.reduce((s, o) => s + (o.bulk ? 0 : o.qty), 0), kg = offer.reduce((s, o) => s + (o.bulk ? o.kg : 0), 0);
+  $("clearText").textContent = "Fjerne " + countTxt(n, Math.round(kg * 10) / 10) + " fra tilbudet? Det kan ikke angres.";
+  $("clearList").hidden = true; $("clearConfirm").hidden = false;
+  $("clearNo").focus();  // Avbryt har fokus, så Enter ikke tømmer lista
+  clearTimeout(tømTid); tømTid = setTimeout(lukkTøm, 8000);
+});
+$("clearNo").addEventListener("click", lukkTøm);
+$("clearYes").addEventListener("click", () => { lukkTøm(); offer = []; persist(); renderOffer(); });
+
 $("clearBtn").addEventListener("click", () => {
   if ($("clearBtn").dataset.armed) {
     offer = []; persist(); renderOffer();
