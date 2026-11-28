@@ -469,7 +469,8 @@ function statusLinjer_(ss, ref, endelig) {
     out.push({
       nr: String(g("Varenr")), name: String(g("Kort")), set: String(g("Sett")), number: String(g("Nummer")), variant: String(g("Variant")),
       givenCond: given, cond: endelig && adjusted ? adjusted : given, changed: endelig && !!adjusted && adjusted.toUpperCase() !== given.toUpperCase(),
-      qty: qty, each: each, sum: round2_(qty * each), bulk: bulk, rejected: endelig && /avvist/i.test(String(g("Status")))
+      qty: qty, each: each, sum: round2_(qty * each), bulk: bulk, rejected: endelig && /avvist/i.test(String(g("Status"))),
+      tcgId: Number(g("TCGPlayer-ID")) || 0  // portalen viser kortbildet
     });
   });
   return out;
