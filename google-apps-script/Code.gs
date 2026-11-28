@@ -38,7 +38,9 @@ const OFFER_HEADERS = [
 ];
 // Kolonner som legges til automatisk når de trengs (også i regneark laget med eldre versjon)
 const OFFER_EXTRA = ["Endelig sum (kr)", "Endelig tilbud sendt", "Token", "Signert av", "Signert tidspunkt", "Utbetaling til", "Kjøpsbevis",
-  "Krever godkjenning", "Sporing"];
+  "Krever godkjenning", "Sporing", "Innsendt liste"];
+// Kort som ikke kjøpes, men som heller ikke regnes som «Avvist»: Status «Fjernet» (tatt ut av tilbudet) eller «Mangler» (ikke i pakken)
+const FJERNET_RE = /fjernet|mangler/i;
 // Statusene i fanen «Tilbud», i rekkefølge. Selgeren ser dem på statussiden i portalen (se del 5).
 const STATUSER = ["Ny", "Venter på godkjenning", "Godkjent", "Under transport", "Mottatt", "Endelig tilbud sendt", "Godtatt", "Avslått", "Betalt"];
 const PORTAL_URL = "https://selg.pokenordic.no";  // statussiden: PORTAL_URL + "/?ref=REF#status"
@@ -49,7 +51,7 @@ const CARD_HEADERS = [
 // «Tilstand» er det selgeren oppga. «Justert tilstand» fyller du inn når du kontrollerer kortet;
 // da regnes «Pris/stk (kr)» automatisk ut på nytt (se onEdit).
 // «Kontrollert» er en avkrysningsboks du bruker for å holde styr på hvilke kort du har sjekket.
-const CARD_EXTRA = ["Kontrollert", "Justert tilstand", "Innsendt pris/stk (kr)"];
+const CARD_EXTRA = ["Kontrollert", "Justert tilstand", "Innsendt pris/stk (kr)", "Innsendt antall"];
 
 /* ======================================================================
    1. Mottak av tilbud fra portalen
@@ -77,7 +79,11 @@ function doPost(e) {
         s.minor ? "Ja" : "Nei", s.guardianName || "", s.guardianContact || "",
         d.modeName, d.rate, d.count, d.total, d.altTotal, d.usdNok, d.pricesDate, s.note || ""
       ].map(safe_));
-      setOffer_(ss, offers.getLastRow(), { "Krever godkjenning": d.needsApproval ? "Ja" : "Nei" });
+      // Kopi av det innsendte, så statussiden kan vise kort du har slettet fra fanen Kort som «fjernet»
+      setOffer_(ss, offers.getLastRow(), {
+        "Krever godkjenning": d.needsApproval ? "Ja" : "Nei",
+        "Innsendt liste": JSON.stringify(d.lines.map((l) => [String(l.nr), String(l.name), String(l.set || ""), String(l.number || ""), Number(l.qty) || 0, Number(l.each) || 0, String(l.cond || ""), Number(l.tcgId) || 0])).slice(0, 49000)
+      });
       const rows = d.lines.map((l) => [
         now, d.ref, l.nr, l.name, l.set, l.number, l.variant, l.cond,
         l.qty, l.usd, l.each, l.sum, l.tcgId, "Ny"
@@ -88,6 +94,7 @@ function doPost(e) {
         // Ta vare på prisen selgeren fikk oppgitt, og gi «Justert tilstand» en nedtrekksliste
         const c = cols_(cards, CARD_EXTRA);
         cards.getRange(start, c["Innsendt pris/stk (kr)"], rows.length, 1).setValues(d.lines.map((l) => [l.each]));
+        cards.getRange(start, c["Innsendt antall"], rows.length, 1).setValues(d.lines.map((l) => [l.qty]));  // til «Endringer» på statussiden
         condValidation_(cards.getRange(start, c["Justert tilstand"], rows.length, 1));
         checkbox_(cards.getRange(start, c["Kontrollert"], rows.length, 1));
         cards.getRange(start, c["Kontrollert"], rows.length, 1).setValues(rows.map(() => [false]));
@@ -447,8 +454,23 @@ function statusOppslag_(d) {
     received: o.received instanceof Date ? Utilities.formatDate(o.received, TZ, "dd.MM.yyyy") : String(o.received || ""),
     estimate: o.estimate, finalTotal: endelig ? o.finalTotal : 0, final: endelig,
     shipTo: { name: BUYER.name, address: BUYER.address, phone: BUYER.phone },
-    lines: statusLinjer_(ss, o.ref, endelig)
+    lines: medInnsendteLinjer_(statusLinjer_(ss, o.ref, endelig), o.submitted, endelig)
   });
+}
+
+// Sammenligner med kopien av det innsendte: rader du har slettet blir «fjernet», rader du har lagt til blir «lagt til».
+// Eldre innsendinger uten kopi får ingen av delene.
+function medInnsendteLinjer_(lines, submitted, endelig) {
+  if (!endelig || !submitted || !submitted.length) return lines;
+  const sendt = new Set(submitted.map((s) => String(s[0])));
+  const finnes = new Set(lines.map((l) => l.nr));
+  lines.forEach((l) => { if (!sendt.has(l.nr)) l.added = true; });
+  submitted.filter((s) => !finnes.has(String(s[0]))).forEach((s) => lines.push({
+    nr: String(s[0]), name: String(s[1]), set: String(s[2] || ""), number: String(s[3] || ""), variant: "", givenCond: String(s[6] || ""),
+    cond: String(s[6] || ""), changed: false, qty: 0, each: 0, sum: 0, bulk: false, rejected: false, removed: "fjernet", tcgId: Number(s[7]) || 0,
+    givenQty: Number(s[4]) || 0, givenEach: Number(s[5]) || 0
+  }));
+  return lines;
 }
 
 // Kortene i innsendingen. Før det endelige tilbudet vises det selgeren oppga (tilstand og innsendt pris), så
@@ -470,7 +492,13 @@ function statusLinjer_(ss, ref, endelig) {
       nr: String(g("Varenr")), name: String(g("Kort")), set: String(g("Sett")), number: String(g("Nummer")), variant: String(g("Variant")),
       givenCond: given, cond: endelig && adjusted ? adjusted : given, changed: endelig && !!adjusted && adjusted.toUpperCase() !== given.toUpperCase(),
       qty: qty, each: each, sum: round2_(qty * each), bulk: bulk, rejected: endelig && /avvist/i.test(String(g("Status"))),
-      tcgId: Number(g("TCGPlayer-ID")) || 0  // portalen viser kortbildet
+      // «Fjernet»/«Mangler» i Status, eller antall 0: tatt ut av tilbudet
+      removed: endelig && !/avvist/i.test(String(g("Status"))) && (FJERNET_RE.test(String(g("Status"))) || qty === 0) ?
+        (/mangler/i.test(String(g("Status"))) ? "mangler" : "fjernet") : "",
+      tcgId: Number(g("TCGPlayer-ID")) || 0,  // portalen viser kortbildet
+      // Det selgeren sendte inn, så statussiden kan liste endringene etter kontrollen (bare etter endelig tilbud)
+      givenEach: endelig ? innsendt : null,
+      givenQty: endelig && g("Innsendt antall") !== "" ? num_(g("Innsendt antall")) : null
     });
   });
   return out;
@@ -839,7 +867,8 @@ function readOffer_(ss, rowNum) {
     mode: String(g("Oppgjør")), estimate: Number(g("Estimert sum (kr)")) || 0, finalTotal: Number(g("Endelig sum (kr)")) || 0,
     token: String(g("Token") || ""), received: g("Mottatt"),
     needsApproval: String(g("Krever godkjenning")) === "Ja" || ["Venter på godkjenning", "Godkjent"].indexOf(String(g("Status"))) >= 0,
-    tracking: String(g("Sporing") || "")
+    tracking: String(g("Sporing") || ""),
+    submitted: (() => { try { return JSON.parse(String(g("Innsendt liste") || "[]")); } catch (e) { return []; } })()
   };
 }
 
@@ -869,8 +898,9 @@ function readLines_(ss, ref, writeBack) {
     const r = data[i];
     const g = (h) => r[c[h] - 1];
     if (String(g("Referanse")) !== String(ref)) continue;
-    if (/avvist/i.test(String(g("Status")))) continue;
+    if (/avvist/i.test(String(g("Status"))) || FJERNET_RE.test(String(g("Status")))) continue;
     const qty = Number(String(g("Antall")).replace(",", ".")) || 0;
+    if (!(qty > 0)) continue;  // antall 0 = fjernet fra tilbudet (vises som «fjernet» på statussiden)
     const each = Number(String(g("Pris/stk (kr)")).replace(",", ".")) || 0;
     const sum = round2_(qty * each);
     if (writeBack && Number(g("Sum (kr)")) !== sum) sh.getRange(i + 1, c["Sum (kr)"]).setValue(sum);

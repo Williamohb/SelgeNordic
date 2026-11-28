@@ -288,6 +288,12 @@ h1 { font-family: var(--font-display); font-weight: 800; font-size: clamp(30px, 
 .st-tabell td.st-bilde .thumb, .st-tabell .st-thumb { display: block; width: 44px; aspect-ratio: 72 / 100; border-radius: 3px; background-color: var(--sunk); }
 .st-tabell tr.avvist .thumb { opacity: .45; }
 .st-tabell td.st-bilde .thumb.kg { display: grid; place-items: center; }
+.st-merk.ny { background: color-mix(in srgb, var(--good) 14%, var(--surface)); color: var(--good); }
+.st-endringer { margin-top: 24px; padding-top: 16px; border-top: 1px solid var(--line); }
+.st-endringer h3 { margin: 0 0 8px; font-size: 18px; }
+.st-endringer ul { margin: 0; padding-left: 20px; display: grid; gap: 8px; font-size: 15px; }
+.st-endringer p { margin: 8px 0 0; }
+.st-endringsum { font-size: 15px; }
 .vis-status header.top, .vis-status .grid, .vis-status .info, .vis-status .receipt-wrap, .vis-status .mobilebar { display: none !important; }
 .statusview { margin: 32px 0 64px; max-width: 900px; }
 .statusview h1 { margin-top: 16px; }
@@ -2532,14 +2538,18 @@ function tegnStatus(r) {
   const rader = (r.lines || []).map((l) => {
     const usikker = !r.final && /usikker/i.test(l.cond);
     const tilstand = l.bulk ? "Bulk" : l.changed ? esc(l.givenCond) + " → <b>" + esc(l.cond) + "</b>" : esc(l.cond);
-    return '<tr class="' + (l.rejected ? "avvist" : "") + '"><td class="st-bilde"><span class="st-thumb" data-id="' + esc(l.tcgId || "") + '"' +
+    const ute = l.rejected || !!l.removed;  // kjøpes ikke: avvist, fjernet eller manglet i pakken
+    return '<tr class="' + (ute ? "avvist" : "") + (l.added ? " lagttil" : "") + '"><td class="st-bilde"><span class="st-thumb" data-id="' + esc(l.tcgId || "") + '"' +
       (/\(japansk\)\s*$/i.test(l.set) ? ' data-jp="1"' : "") + (l.bulk ? ' data-bulk="1"' : "") + '></span></td><td class="mono">' + esc(l.nr) + "</td>" +
       '<td><span class="kortnavn">' + esc(l.name) + "</span><small>" + esc([l.set, l.number, l.bulk ? "" : l.variant].filter(Boolean).join(" · ")) + "</small>" +
-      (l.rejected ? '<span class="st-merk">Kjøpes ikke, sendes tilbake</span>' : "") + "</td>" +
-      "<td>" + tilstand + "</td><td class=\"num\">" + esc(l.bulk ? String(l.qty).replace(".", ",") + " kg" : l.qty) + "</td>" +
-      '<td class="num">' + (usikker ? "vurderes" : fmtKr(l.each)) + '</td><td class="num">' + (l.rejected ? "–" : usikker ? "vurderes" : fmtKr(l.sum)) + "</td></tr>";
+      (l.rejected ? '<span class="st-merk">Kjøpes ikke, sendes tilbake</span>'
+        : l.removed === "mangler" ? '<span class="st-merk">Var ikke med i pakken</span>'
+        : l.removed ? '<span class="st-merk">Fjernet fra tilbudet</span>'
+        : l.added ? '<span class="st-merk ny">Lagt til av oss</span>' : "") + "</td>" +
+      "<td>" + tilstand + "</td><td class=\"num\">" + (l.removed ? "–" : esc(l.bulk ? String(l.qty).replace(".", ",") + " kg" : l.qty)) + "</td>" +
+      '<td class="num">' + (l.removed ? "–" : usikker ? "vurderes" : fmtKr(l.each)) + '</td><td class="num">' + (ute ? "–" : usikker ? "vurderes" : fmtKr(l.sum)) + "</td></tr>";
   }).join("");
-  const antall = (r.lines || []).reduce((s, l) => s + (l.bulk ? 0 : l.qty), 0);
+  const antall = (r.lines || []).reduce((s, l) => s + (l.bulk || l.removed ? 0 : l.qty), 0);
   $("statusResult").innerHTML = '<div class="st-kort">' +
     '<div class="st-hode"><h2>Innsending #' + esc(r.ref) + "</h2><span>" + esc([r.received ? "Sendt inn " + r.received : "", r.mode].filter(Boolean).join(" · ")) + "</span></div>" +
     ukjent + '<ol class="tidslinje">' + linjer + "</ol>" +
@@ -2548,7 +2558,7 @@ function tegnStatus(r) {
     '<h3 style="margin:24px 0 0">Kortene i innsendingen <span class="fineprint">(' + antall + " kort)</span></h3>" +
     (r.final ? "" : '<p class="fineprint">Prisene er estimatet fra innsendingen. Når vi har kontrollert kortene, ser du endelig tilstand og pris her.</p>') +
     '<div class="st-tabell"><table><thead><tr><th><span class="sr">Bilde</span></th><th>Varenr.</th><th>Kort</th><th>Tilstand</th><th class="num">Antall</th><th class="num">Pris/stk</th><th class="num">Sum</th></tr></thead><tbody>' +
-    rader + "</tbody></table></div></div>";
+    rader + "</tbody></table></div>" + endringerHtml(r) + "</div>";
   $("statusResult").hidden = false;
   fyllStatusBilder();
   const f = $("stSendt");
@@ -2562,6 +2572,39 @@ function tegnStatus(r) {
       hentStatus();
     } catch (err) { alert("Fikk ikke kontakt. Prøv igjen om litt."); btn.disabled = false; btn.textContent = "Jeg har sendt pakken"; }
   });
+}
+
+// «Endringer»: hva vi endret ved kontrollen, sammenlignet med innsendingen. Vises først etter det endelige tilbudet.
+function endringerHtml(r) {
+  if (!r.final) return "";
+  const kr0 = (n) => fmtKr(n);
+  const punkter = [];
+  for (const l of r.lines || []) {
+    const hvem = "<b>" + esc(l.name) + "</b> <span class=\"fineprint\">" + esc([l.number, l.nr].filter(Boolean).join(" · ")) + "</span>";
+    const før = l.givenEach != null ? l.givenEach : l.each;
+    const førAntall = l.givenQty != null ? l.givenQty : l.qty;
+    const iEstimatet = før && førAntall ? " (" + kr0(før * førAntall) + " i estimatet)" : "";
+    if (l.rejected) { punkter.push(hvem + ": kjøpes ikke, og sendes tilbake til deg" + iEstimatet + "."); continue; }
+    if (l.removed === "mangler") { punkter.push(hvem + ": var ikke med i pakken, og er tatt ut av tilbudet" + iEstimatet + "."); continue; }
+    if (l.removed) { punkter.push(hvem + ": fjernet fra tilbudet" + iEstimatet + "."); continue; }
+    if (l.added) {
+      punkter.push(hvem + ": lagt til av oss (" + esc(l.bulk ? String(l.qty).replace(".", ",") + " kg" : l.qty + " stk") + (l.bulk ? "" : ", " + esc(l.cond)) + ", " + kr0(l.sum) + ").");
+      continue;
+    }
+    const deler = [];
+    if (!l.bulk && l.changed) {
+      deler.push(/usikker/i.test(l.givenCond) ? "vurdert til <b>" + esc(l.cond) + "</b> (du valgte Usikker)" : "tilstand " + esc(l.givenCond) + " → <b>" + esc(l.cond) + "</b>");
+    }
+    if (førAntall !== l.qty) deler.push("antall " + esc(String(førAntall).replace(".", ",")) + " → <b>" + esc(String(l.qty).replace(".", ",")) + "</b>" + (l.bulk ? " kg" : ""));
+    if (Math.abs(før - l.each) >= 0.01) deler.push("pris per " + (l.bulk ? "kg" : "stk") + " " + kr0(før) + " → <b>" + kr0(l.each) + "</b>");
+    if (deler.length) punkter.push(hvem + ": " + deler.join(", ") + ".");
+  }
+  const sum = r.finalTotal && Math.abs(r.finalTotal - r.estimate) >= 0.01
+    ? '<p class="st-endringsum">Estimatet var ' + kr0(r.estimate) + ", det endelige tilbudet er <b>" + kr0(r.finalTotal) + "</b>.</p>" : "";
+  return '<div class="st-endringer"><h3>Endringer etter kontrollen</h3>' +
+    (punkter.length ? "<ul>" + punkter.map((p) => "<li>" + p + "</li>").join("") + "</ul>" + sum
+      : "<p>Ingen endringer. Kortene var slik du oppga, og prisene står som i innsendingen.</p>") +
+    '<p class="fineprint">Lurer du på en endring? Svar på e-posten med det endelige tilbudet, eller skriv til kundeservice@pokenordic.no.</p></div>';
 }
 
 // Kortbildene i statuslista: fra bildearkene, som ellers i portalen. Japanske kort laster de japanske dataene først.

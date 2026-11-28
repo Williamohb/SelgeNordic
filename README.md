@@ -109,6 +109,15 @@ bekreftelses-e-posten), skriver inn referanse og e-post, og ser en tidslinje og 
 Før det endelige tilbudet ser selgeren tilstanden og prisene fra innsendingen; etterpå justert tilstand,
 endelig pris og kort som ikke kjøpes. Status-kolonnen har nedtrekksliste med statusene.
 
+**Endringer etter kontrollen** står nederst på statussiden når det endelige tilbudet er sendt. De finnes automatisk
+ved å sammenligne med det selgeren sendte inn (kopien i kolonnen «Innsendt liste»):
+- justert tilstand og endret pris eller antall,
+- **Status** `Avvist` i fanen Kort: kjøpes ikke, sendes tilbake,
+- **Status** `Mangler`: var ikke med i pakken; **Status** `Fjernet`, **Antall** 0 eller en slettet rad: fjernet fra tilbudet,
+- en rad du har lagt til selv (nytt varenummer): «lagt til av oss».
+
+Kort med Fjernet, Mangler eller antall 0 kommer ikke med i det endelige tilbudet og kjøpsbeviset.
+
 **Oppdatere skriptet til denne versjonen (én gang):**
 1. Lim inn hele den nye `google-apps-script/Code.gs` i Apps Script og trykk **Lagre**.
    Sjekk at `WEBAPP_URL` øverst er nettapp-adressen din (slutter på `/exec`). Lenkene til selgeren bruker den.
