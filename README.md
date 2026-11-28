@@ -4,6 +4,12 @@ Selgere søker opp kort, velger variant og tilstand og får en estimert utbetali
 **TCGPlayer Market Price × 78 % (utbetaling) eller 83 % (innbytte) × tilstandstrekk × USD/NOK-kurs**.
 Til slutt lager de en tilbudstekst som de sender deg.
 
+Kortene kan legges inn på tre måter: **Søk enkeltkort**, **Settoversikt** (et helt sett om gangen) og
+**Importer samling** (CSV-eksport fra Collectr eller et regneark). Importen leser fila bare i nettleseren,
+finner kolonnene ut fra overskriftene (navn, sett, nummer, antall, tilstand, variant, gradering, TCGplayer-ID)
+og bruker de samme reglene som settoversikten. Selgeren ser over listen før noe legges i tilbudet.
+CSV-filer ignoreres av git, så eksempelfiler med private samlinger blir ikke pushet.
+
 ## Filer
 
 | Fil | Hva den gjør |
@@ -103,7 +109,7 @@ bekreftelses-e-posten), skriver inn referanse og e-post, og ser en tidslinje og 
 | Venter på godkjenning | Forespørsel innsendt – avvent bekreftelse | portalen (over 10 000 kr eller kort som selges sjelden) |
 | Ny / Godkjent | Send pakken (med adressen) | portalen / **PokéNordic → Godkjenn valgt innsending** (sender e-post) |
 | Under transport | Under transport (med sporingsnummer) | selgeren trykker «Jeg har sendt pakken» (du får e-post) |
-| Mottatt | Pakken har ankommet, under kontroll 1–3 virkedager | **PokéNordic → Merk valgt tilbud som mottatt** (sender e-post) |
+| Mottatt | Pakken har ankommet, under kontroll 1–2 virkedager | **PokéNordic → Merk valgt tilbud som mottatt** (sender e-post) |
 | Endelig tilbud sendt → Godtatt → Betalt | som før | som før |
 
 Før det endelige tilbudet ser selgeren tilstanden og prisene fra innsendingen; etterpå justert tilstand,

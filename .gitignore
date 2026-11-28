@@ -17,5 +17,9 @@ shopify-import/
 # Nøkler til Shopify-appen (shopify_opplasting.py). Skal ALDRI i det offentlige repoet.
 shopify-tilgang.json
 
+# Eksempelfiler fra samlingsapper (private samlinger, skal ikke i det offentlige repoet)
+*.csv
+collectr/
+
 # Kode til Shopify-temaet (limes inn i Shopify, skal ikke ligge i det offentlige repoet)
 shopify/

@@ -550,7 +550,7 @@ function approveOffer() {
   ui.alert("Tilbud #" + o.ref + " er godkjent" + (isEmail_(o.contact) ? ", og " + o.contact + " har fått e-post." : "."));
 }
 
-// Menyvalg: pakken har kommet. Selgeren ser «under kontroll (1–3 virkedager)» på statussiden og får e-post.
+// Menyvalg: pakken har kommet. Selgeren ser «under kontroll (1–2 virkedager)» på statussiden og får e-post.
 function markReceived() {
   const ui = SpreadsheetApp.getUi();
   const ss = SpreadsheetApp.getActiveSpreadsheet();
@@ -566,7 +566,7 @@ function markReceived() {
   if (isEmail_(o.contact)) {
     sendMail_({ to: o.contact, subject: "Vi har mottatt kortene dine – tilbud #" + o.ref, replyTo: OWNER_EMAIL, name: SENDER_NAME,
       htmlBody: '<div style="font-family:Arial,sans-serif;font-size:14px;color:#111"><p>Hei ' + esc_(o.name) + "!</p>" +
-        "<p>Pakken med kortene for tilbud <b>#" + esc_(o.ref) + "</b> har kommet fram. Vi kontrollerer kortene, og du får det endelige tilbudet på e-post innen 1–3 virkedager.</p>" +
+        "<p>Pakken med kortene for tilbud <b>#" + esc_(o.ref) + "</b> har kommet fram. Vi kontrollerer kortene, og du får det endelige tilbudet på e-post innen 1–2 virkedager.</p>" +
         '<p>Følg innsendingen: <a href="' + statusLenke_(o.ref) + '">' + statusLenke_(o.ref) + "</a></p><p>Hilsen PokéNordic</p></div>" });
   }
   ui.alert("Tilbud #" + o.ref + " er merket som mottatt" + (isEmail_(o.contact) ? ", og selgeren har fått e-post." : "."));

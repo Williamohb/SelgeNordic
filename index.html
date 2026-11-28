@@ -530,6 +530,17 @@ h1 { font-family: var(--font-display); font-weight: 800; font-size: clamp(30px, 
 .svc input::-webkit-inner-spin-button { -webkit-appearance: none; }
 .svc input:focus { outline: none; border-color: var(--accent); box-shadow: 0 0 0 3px color-mix(in srgb, var(--accent) 22%, transparent); }
 .svc.har { border-color: var(--accent); background: var(--accent-soft); }
+/* − antall + i settoversikten */
+.svq { grid-column: 2; grid-row: 1 / span 2; display: inline-flex; align-items: center; border: 1.5px solid var(--line-strong); border-radius: var(--radius-s);
+       overflow: hidden; background: var(--surface); }
+.svq:focus-within { border-color: var(--accent); box-shadow: 0 0 0 3px color-mix(in srgb, var(--accent) 22%, transparent); }
+.svq button { all: unset; box-sizing: border-box; width: 34px; height: 40px; display: grid; place-items: center; cursor: pointer; font-size: 18px;
+              color: var(--ink); transition: background 150ms var(--ease); }
+.svq button:hover { background: var(--sunk); }
+.svq button:focus-visible { outline: 2px solid var(--accent); outline-offset: -2px; }
+.svq button:disabled { opacity: .35; cursor: default; background: none; }
+.svc .svq input { width: 36px; height: 40px; border: 0; border-radius: 0; box-shadow: none; padding: 0; background: transparent; }
+.svc .svq input:focus { box-shadow: none; }
 .svc.stopp { cursor: default; }
 .svc.stopp .svp { color: var(--warn); font-family: var(--font-body); }
 .svc input:disabled { opacity: .35; }
@@ -537,6 +548,23 @@ h1 { font-family: var(--font-display); font-weight: 800; font-size: clamp(30px, 
 .setbar span { font-size: 15px; }
 @media (max-width: 900px) { .setbar { bottom: 68px; } }
 @media (max-width: 560px) { .setrow { grid-template-columns: auto minmax(0, 1fr); } .setrow .sv { grid-column: 1 / -1; justify-content: flex-start; } .setbar .btn { width: 100%; } }
+@media (max-width: 480px) { .viewtabs { gap: 4px 16px; flex-wrap: wrap; } .viewtabs button { font-size: 14px; } }
+/* Importer samling (CSV) */
+.impdrop { display: grid; gap: 8px; justify-items: start; padding: 20px; margin-top: 4px; background: var(--surface); border: 1.5px dashed var(--line-strong); border-radius: var(--radius); transition: border-color 150ms var(--ease), background 150ms var(--ease); }
+.impdrop.over { border-color: var(--accent); background: var(--accent-soft); }
+.impdrop .hint { margin: 0; }
+.skjultfil { position: absolute; width: 1px; height: 1px; opacity: 0; pointer-events: none; }
+.impdrop label.btn { cursor: pointer; }
+.impdrop:has(.skjultfil:focus-visible) label.btn { outline: 2px solid var(--accent); outline-offset: 2px; }
+.impvalg { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 8px; }
+.impvalg select { font: inherit; font-size: 14px; height: 40px; padding: 0 8px; border-radius: var(--radius-s); border: 1.5px solid var(--line-strong); background: var(--surface); color: var(--ink); max-width: 100%; }
+.impvalg select:focus { outline: none; border-color: var(--accent); box-shadow: 0 0 0 3px color-mix(in srgb, var(--accent) 22%, transparent); }
+.setrow .si .impflagg { color: var(--warn); }
+#impMore { margin-top: 12px; }
+.impskip { margin-top: 16px; padding: 12px 16px; background: var(--surface); border: 1px solid var(--line); border-radius: var(--radius); }
+.impskip summary { cursor: pointer; font-weight: 600; font-size: 15px; }
+.impskip ul { margin: 12px 0 0; padding-left: 20px; display: grid; gap: 4px; font-size: 14px; }
+.impskip li span { color: var(--muted); }
 
 /* Kortdetalj */
 .detail { padding: 16px 16px 24px; display: grid; gap: 16px; }
@@ -818,7 +846,7 @@ ol.steps span { font-size: 14px; color: var(--muted); }
     <div>
       <h1>Få penger eller nye produkter for Pokémon-kortene dine</h1>
       <p class="lede">Søk opp kortene, velg variant og tilstand, og se prisen med en gang. Prisene følger TCGPlayer-markedet og oppdateres daglig.</p>
-      <p class="herofakta">Gratis og uforpliktende. Svar innen 1–3 virkedager etter at vi har fått kortene, og utbetaling samme dag som du godtar.</p>
+      <p class="herofakta">Gratis og uforpliktende. Svar innen 1–2 virkedager etter at vi har fått kortene, og utbetaling samme dag som du godtar.</p>
       <div class="herolinks">
         <a class="herolink" href="#slik">Slik fungerer det <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 5v14"/><path d="m6 13 6 6 6-6"/></svg></a>
         <a class="herolink" href="#status">Sjekk status på innsending</a>
@@ -866,6 +894,7 @@ ol.steps span { font-size: 14px; color: var(--muted); }
       <div class="viewtabs" role="tablist" aria-label="Hvordan vil du legge inn kortene?">
         <button type="button" role="tab" id="tabSearch" aria-selected="true">Søk enkeltkort</button>
         <button type="button" role="tab" id="tabSet" aria-selected="false">Settoversikt</button>
+        <button type="button" role="tab" id="tabImport" aria-selected="false">Importer samling</button>
       </div>
       <div id="searchView">
       <div class="searchbox">
@@ -900,6 +929,25 @@ ol.steps span { font-size: 14px; color: var(--muted); }
           <p class="hint" id="setLowNote" hidden></p>
           <div class="setrows" id="setRows"></div>
           <div class="setbar"><span id="setSum"></span><button class="btn" type="button" id="setAdd" disabled>Legg til i tilbudet</button></div>
+        </div>
+      </section>
+
+      <!-- Importer samling: CSV fra Collectr eller et regneark. Fila leses bare i nettleseren, ingenting lastes opp. -->
+      <section class="setview" id="importView" hidden aria-label="Importer samling">
+        <div class="impdrop" id="impDrop">
+          <b>Har du samlingen din i Collectr eller et regneark?</b>
+          <p class="hint">Eksporter den som CSV og velg fila her. Vi finner kortene, og du ser over listen før noe havner i tilbudet. Fila lastes ikke opp noe sted, den leses bare her i nettleseren din.</p>
+          <label class="btn ghost small" for="impFile">Velg CSV-fil</label>
+          <input type="file" id="impFile" accept=".csv,.tsv,.txt,text/csv" class="skjultfil">
+          <p class="hint">I Collectr: åpne samlingen, trykk på menyen og velg eksport til CSV. Fra et regneark trenger vi kolonner for kortnavn, sett, nummer og antall. Tilstand og variant er fint å ha med.</p>
+        </div>
+        <div id="impResult" hidden>
+          <div class="sethead"><button type="button" class="linkbtn" id="impBack">← Velg en annen fil</button><h2 id="impTitle"></h2><span id="impInfo"></span></div>
+          <p class="hint" id="impNote"></p>
+          <div class="setrows" id="impRows"></div>
+          <button type="button" class="btn ghost small" id="impMore" hidden></button>
+          <details class="impskip" id="impSkip" hidden><summary id="impSkipSum"></summary><ul id="impSkipList"></ul></details>
+          <div class="setbar"><span id="impSum"></span><button class="btn" type="button" id="impAdd" disabled>Legg til i tilbudet</button></div>
         </div>
       </section>
 
@@ -1021,7 +1069,7 @@ ol.steps span { font-size: 14px; color: var(--muted); }
     <ol class="steps">
       <li><b>Send tilbud her på siden</b><span>Søk opp kortene, velg tilstand og send inn. Du får en referanse med en gang.</span></li>
       <li><b>Send kortene til oss</b><span>Pakk dem godt, legg ved en lapp med referansen og send med Posten med sporing. Er tilbudet over <span class="approvalAmount">10 000 kr</span>, venter du til vi har bekreftet det på e-post.</span></li>
-      <li><b>Vi kontrollerer kortene</b><span>Innen 1–3 virkedager etter at vi har mottatt dem, sender vi deg det endelige tilbudet og kjøpsbeviset på e-post.</span></li>
+      <li><b>Vi kontrollerer kortene</b><span>Innen 1–2 virkedager etter at vi har mottatt dem, sender vi deg det endelige tilbudet og kjøpsbeviset på e-post.</span></li>
       <li><b>Du godtar eller avslår</b><span>Du godtar ved å trykke på lenken i e-posten og skrive navnet ditt. Avslår du, sender vi kortene tilbake, og du betaler returfrakten.</span></li>
       <li><b>Du får betalt</b><span>Utbetalingen starter samme dag som du godtar tilbudet.</span></li>
     </ol>
@@ -1080,7 +1128,7 @@ ol.steps span { font-size: 14px; color: var(--muted); }
       </div>
       <div class="qa">
         <h4>Hvor lang tid tar det?</h4>
-        <p>Du får det endelige tilbudet på e-post innen 1–3 virkedager etter at vi har mottatt kortene. Godtar du, starter utbetalingen samme dag.</p>
+        <p>Du får det endelige tilbudet på e-post innen 1–2 virkedager etter at vi har mottatt kortene. Godtar du, starter utbetalingen samme dag.</p>
       </div>
       <div class="qa">
         <h4>Hva er forskjellen på utbetaling og innbytte?</h4>
@@ -1320,6 +1368,7 @@ function setMode(m, save = true) {
   document.querySelectorAll("#results .row").forEach((el) => el.replaceWith(renderRow(BYID.get(+el.dataset.id))));
   renderOffer();
   if (visning === "sett" && settGruppe) renderSett();  // nye priser for utbetaling/innbytte
+  if (impLinjer.length) renderImport();
   $("outBox").hidden = true;
 }
 const SPRITE_COLS = 20; // samme som COLS i build_images.py
@@ -1709,8 +1758,10 @@ function visVisning(v) {
   if (v === "sett" && !SETLOGOS) hentSettLogoer().then(() => { if (visning === "sett") settGruppe ? renderSett() : renderSettListe(); });
   $("tabSearch").setAttribute("aria-selected", v === "sok" ? "true" : "false");
   $("tabSet").setAttribute("aria-selected", v === "sett" ? "true" : "false");
+  $("tabImport").setAttribute("aria-selected", v === "import" ? "true" : "false");
   $("searchView").hidden = v !== "sok";
   $("setView").hidden = v !== "sett";
+  $("importView").hidden = v !== "import";
   if (v === "sett" && DATA) settGruppe ? renderSett() : renderSettListe();
 }
 
@@ -1839,9 +1890,13 @@ function settRad(c) {
     if (!settVises(c, usdP)) continue;  // f.eks. vanlig utgave under 5 kr, når reverse holo-utgaven er verdt mer
     const k = c.id + "|" + v, ok = settKanLeggesTil(c, usdP, cond);
     const r = usdP ? payoutRange(usdP, cond, mode, c.lang) : null;
-    const cell = document.createElement("label");
+    const cell = document.createElement("div");
     cell.className = "svc" + (ok ? "" : " stopp") + (settValg.get(k) > 0 ? " har" : "");
-    cell.innerHTML = '<span class="svn"></span><span class="svp"></span><input type="number" min="0" max="99" step="1" inputmode="numeric" placeholder="0">';
+    cell.innerHTML = '<span class="svn"></span><span class="svp"></span>' +
+      '<div class="svq"><button type="button" data-steg="-1" aria-label="Færre">−</button>' +
+      '<input type="number" min="0" max="99" step="1" inputmode="numeric" placeholder="0">' +
+      '<button type="button" data-steg="1" aria-label="Flere">+</button></div>';
+    cell.querySelectorAll(".svq button").forEach((b) => { b.disabled = !ok; });
     cell.querySelector(".svn").textContent = VARIANT_LABEL[v] || v;
     cell.querySelector(".svp").textContent = !usdP ? "Ingen pris" : !ok ? "Ta kontakt" : r ? fmtRange(r[0], r[1]) : fmtKr(payout(usdP, cond, mode, c.lang));
     const inp = cell.querySelector("input");
@@ -1904,6 +1959,15 @@ $("setCond").addEventListener("change", renderSett);
 let settTid;
 $("setFilter").addEventListener("input", () => { clearTimeout(settTid); settTid = setTimeout(renderSett, 150); });
 $("setOnly").addEventListener("change", renderSett);
+// − og + rundt antallet: endrer feltet og bruker samme oppdatering som når man skriver i det
+$("setRows").addEventListener("click", (e) => {
+  const b = e.target.closest(".svq button");
+  if (!b || b.disabled) return;
+  const inp = b.parentElement.querySelector("input");
+  const n = Math.max(0, Math.min(99, (Math.floor(+inp.value) || 0) + +b.dataset.steg));
+  inp.value = n || "";
+  inp.dispatchEvent(new Event("input", { bubbles: true }));
+});
 // Hurtigvalg av tilstand på et kort: bare den raden tegnes på nytt
 $("setRows").addEventListener("click", (e) => {
   const b = e.target.closest(".rowcond button");
@@ -1930,6 +1994,350 @@ $("setAdd").onclick = () => {
   lagreSettValg();
   renderSett();
   $("setSum").textContent = "La til " + n + " kort i tilbudet ✓";
+};
+
+/* ---------- Importer samling (CSV) ---------- */
+// CSV fra Collectr eller et eget regneark. Fila leses bare i nettleseren. Kolonnene finnes ut fra overskriftene,
+// og hver rad kobles til kortet via TCGplayer-ID, eller sett + nummer + navn. Samme regler som settoversikten:
+// billige kort kjøpes som bulk etter vekt, og dyre eller spesielle kort er «Ta kontakt».
+let impLinjer = [], impVis = 100;    // [{ c, v, cond, n, flagg }]
+const KOLONNER = [
+  ["id", /^(tcg ?player )?(product )?id$|tcg ?player (product )?id|^product id$/],
+  ["antall", /^(quantity|qty|antall|count|amount|stk|ant|owned)$|quantity/],
+  ["nummer", /^(card |collector )?(number|nummer|no|nr|#)$|^number|card #|^nr /],
+  ["grad", /grade|grading|graded|slab/],
+  ["tilstand", /condition|^cond$|tilstand|kvalitet/],
+  ["variant", /varian|printing|finish|foil|edition|subtype|treatment/],
+  ["sett", /^(set|sett|expansion|serie|series)( name| navn)?$|^set |set name|expansion|^group/],
+  ["spraak", /language|sprak|^lang$/],
+  ["kategori", /category|product line|^game$|kategori/],
+  ["navn", /^(product |card |kort)?(name|navn)$|^card$|^kort$|^title$|product name|card name/]
+];
+const kolNavn = (h) => String(h).toLowerCase().normalize("NFD").replace(/[̀-ͯ]/g, "").replace(/[^a-z0-9#]+/g, " ").trim();
+
+function lesCsv(tekst) {
+  tekst = tekst.replace(/^﻿/, "");
+  const første = tekst.split(/\r?\n/, 1)[0] || "";
+  const skille = [",", ";", "\t"].map((s) => [s, første.split(s).length]).sort((a, b) => b[1] - a[1])[0][0];
+  const rader = [];
+  let rad = [], felt = "", iAnf = false;
+  for (let i = 0; i < tekst.length; i++) {
+    const ch = tekst[i];
+    if (iAnf) {
+      if (ch === '"') { if (tekst[i + 1] === '"') { felt += '"'; i++; } else iAnf = false; }
+      else felt += ch;
+    } else if (ch === '"') iAnf = true;
+    else if (ch === skille) { rad.push(felt); felt = ""; }
+    else if (ch === "\n" || ch === "\r") {
+      if (ch === "\r" && tekst[i + 1] === "\n") i++;
+      rad.push(felt); felt = "";
+      if (rad.some((f) => f.trim())) rader.push(rad);
+      rad = [];
+    } else felt += ch;
+  }
+  rad.push(felt);
+  if (rad.some((f) => f.trim())) rader.push(rad);
+  return rader;
+}
+// Finner overskriftsraden (blant de første ti) og hvilken kolonne som er hva
+function finnKolonner(rader) {
+  let best = null;
+  rader.slice(0, 10).forEach((rad, ri) => {
+    const kol = {};
+    rad.forEach((h, i) => {
+      const n = kolNavn(h);
+      if (!n) return;
+      const treff = KOLONNER.find(([k, re]) => !(k in kol) && re.test(n));
+      if (treff) kol[treff[0]] = i;
+    });
+    const poeng = Object.keys(kol).length;
+    if (("navn" in kol || "id" in kol) && (!best || poeng > best.poeng)) best = { ri, kol, poeng };
+  });
+  return best;
+}
+
+const VARIANT_TEKST = (s) => {
+  const t = kolNavn(s);
+  if (!t) return null;
+  if (/reverse/.test(t)) return "R";
+  const første = /1st|first/.test(t), holo = /holo|foil/.test(t) && !/non ?holo|non ?foil/.test(t);
+  if (første) return holo ? "1H" : "1";
+  if (/unlimited/.test(t)) return holo ? "UH" : "U";
+  if (holo) return "H";
+  if (/normal|non ?holo|non ?foil|regular|standard/.test(t)) return "N";
+  return null;
+};
+const TILSTAND_TEKST = (s) => {
+  const t = kolNavn(s);
+  if (!t) return null;
+  if (/damaged|^dmg|^dm$|poor|^po$/.test(t)) return "DMG";
+  if (/heavily|^hp\b/.test(t)) return "HP";
+  if (/moderately|^mp\b|^good$|^gd$/.test(t)) return "MP";
+  if (/lightly|light played|^lp\b|excellent|^ex$/.test(t)) return "LP";
+  if (/near mint|^nm\b|mint|^mt$/.test(t)) return "NM";
+  if (/played|^pl$/.test(t)) return "HP";
+  return null;
+};
+const erGradert = (grad, tilstand) => {
+  const g = kolNavn(grad || "");
+  if (g && !/^(ungraded|raw|none|no|nei|0|n a|na|ikke gradert)$/.test(g)) return true;
+  return /\b(psa|bgs|cgc|sgc|beckett|ace|tag)\b/.test(kolNavn(tilstand || ""));
+};
+const spraakFra = (s) => {
+  const t = kolNavn(s || "");
+  if (/japan|japansk|^jp\b|^ja\b/.test(t)) return "jp";
+  if (/english|engelsk|^en\b|^eng\b/.test(t)) return "en";
+  return null;
+};
+
+// Nøkler for å sammenligne sett, nummer og navn på tvers av skrivemåter
+const nrNokkel = (n) => normNum(String(n).toLowerCase().replace(/\s+/g, "")).split("/")[0];
+const nrTotal = (n) => { const d = normNum(String(n).toLowerCase().replace(/\s+/g, "")).split("/"); return d.length > 1 ? d[1] : ""; };
+function settNokkel(navn) {
+  const t = norm(String(navn)).replace(/\b(pokemon|tcg|the|set|expansion|trading card game)\b/g, " ").replace(/\s+/g, " ").trim();
+  const uten = t.replace(/^(sv|swsh|sm|xy|bw|me|mee|dp|hgss|svp)\d*[a-z]*\s+/, "").trim();
+  return uten || t;
+}
+function settLikhet(a, b) {
+  if (!a || !b) return 0;
+  if (a === b) return 3;
+  if (Math.min(a.length, b.length) >= 3 && (a.includes(b) || b.includes(a))) return 2;
+  const ta = new Set(a.split(" ")), tb = new Set(b.split(" "));
+  const felles = [...ta].filter((x) => tb.has(x)).length;
+  return felles / new Set([...ta, ...tb]).size >= 0.5 ? 1 : 0;
+}
+const utenParentes = (s) => s.replace(/\([^)]*\)|\[[^\]]*\]/g, " ").replace(/\s+/g, " ").trim();
+function navnLikhet(kort, rad) {
+  const a = norm(kort).trim(), b = norm(rad).replace(/\s+-?\s*[a-z]*\d+[a-z]?(\/[a-z]*\d+)?\s*$/, "").trim();
+  if (!b) return 1;
+  if (a === b) return 3;
+  const a2 = utenParentes(a), b2 = utenParentes(b);
+  if (a2 === b2) return 2.5;
+  if (a2.includes(b2) || b2.includes(a2)) return 2;
+  return a2.split(" ")[0] === b2.split(" ")[0] ? 1 : 0;
+}
+function impIndeks(l) {
+  const L = LANGS[l];
+  if (L.impIdx) return L.impIdx;
+  const perNr = new Map(), perNavn = new Map();
+  for (const c of L.cards) {
+    const k = nrNokkel(c.number);
+    if (!perNr.has(k)) perNr.set(k, []);
+    perNr.get(k).push(c);
+    const n = utenParentes(norm(c.name).trim());
+    if (!perNavn.has(n)) perNavn.set(n, []);
+    perNavn.get(n).push(c);
+  }
+  return (L.impIdx = { perNr, perNavn, sett: L.sets.map((s) => settNokkel(s.name)) });
+}
+// Finner kortet for én rad. { c } ved treff, { flere: true } når flere kort passer like godt, ellers null.
+function finnKort(r) {
+  if (r.id) { const c = BYID.get(r.id); if (c) return { c }; }
+  const langs = r.lang ? [r.lang] : ["en", "jp"];
+  for (const l of langs) {
+    const L = LANGS[l];
+    if (!L.data) continue;
+    const idx = impIndeks(l), sk = r.sett ? settNokkel(r.sett) : "";
+    let nr = r.nr;
+    if (!nr && r.navn) { const m = r.navn.match(/\s-?\s*([A-Za-z]*\d+[a-z]?(?:\/[A-Za-z]*\d+)?)\s*$/); if (m && /\d/.test(m[1])) nr = m[1]; }
+    const kand = nr ? idx.perNr.get(nrNokkel(nr)) || [] : r.navn ? idx.perNavn.get(utenParentes(norm(r.navn).trim())) || [] : [];
+    let toppen = -1, beste = [];
+    for (const c of kand) {
+      const ss = sk ? settLikhet(sk, idx.sett[c.si]) : 0;
+      if (sk && !ss) continue;
+      const ns = r.navn ? navnLikhet(c.name, r.navn) : 1;
+      if (!ns) continue;
+      const tot = nr && nrTotal(nr) && nrTotal(nr) === nrTotal(c.number) ? 1 : 0;
+      const s = ss * 10 + ns * 3 + tot;
+      if (s > toppen) { toppen = s; beste = [c]; } else if (s === toppen) beste.push(c);
+    }
+    if (beste.length === 1) return { c: beste[0] };
+    if (beste.length > 1) return { flere: true };
+  }
+  return null;
+}
+function velgVariant(c, tekst) {
+  const priset = c.variants.filter(([, u]) => u > 0);
+  const kode = VARIANT_TEKST(tekst);
+  if (kode && priset.some(([v]) => v === kode)) return { v: kode };
+  if (priset.length === 1) return { v: priset[0][0], gjettet: !!kode && kode !== priset[0][0] };
+  if (!priset.length) return null;
+  const rekke = Object.keys(VARIANT_LABEL);
+  const v = priset.slice().sort((a, b) => (rekke.indexOf(a[0]) + 1 || 99) - (rekke.indexOf(b[0]) + 1 || 99))[0][0];
+  return { v, gjettet: true };
+}
+const usdFor = (c, v) => (c.variants.find((x) => x[0] === v) || [])[1] || 0;
+function bulkGrunn(c) {
+  if (c.lang === "jp" && (CONFIG.setHideJpRarities || []).includes(c.rarity)) return "kjøper vi ikke enkeltvis";
+  if (/^Basic .*Energy\b/i.test(c.name)) return "basisenergi kjøper vi som bulk etter vekt";
+  return "under " + fmtKr(CONFIG.setMinNok).replace(",00", "") + " i Near Mint, kjøper vi som bulk etter vekt";
+}
+
+async function importerFil(fil) {
+  $("impDrop").classList.remove("over");
+  if (!fil) return;
+  if (fil.size > 15 * 1024 * 1024) { visImportFeil("Fila er for stor. Del den opp, eller eksporter bare kortene du vil selge."); return; }
+  const tekst = await fil.text();
+  const rader = lesCsv(tekst);
+  const hode = finnKolonner(rader);
+  if (!hode) { visImportFeil("Fant ingen kolonne for kortnavn i fila. Sjekk at det er en CSV-fil med overskrifter øverst, f.eks. «Name», «Set», «Number» og «Quantity»."); return; }
+  const k = hode.kol, felt = (rad, navn) => (navn in k ? String(rad[k[navn]] || "").trim() : "");
+  const rå = rader.slice(hode.ri + 1).map((rad) => ({
+    id: +felt(rad, "id") || 0, navn: felt(rad, "navn"), sett: felt(rad, "sett"), nr: felt(rad, "nummer"),
+    variant: felt(rad, "variant"), tilstand: felt(rad, "tilstand"), grad: felt(rad, "grad"),
+    antall: "antall" in k ? Math.floor(+felt(rad, "antall").replace(",", ".")) || 0 : 1,
+    lang: spraakFra(felt(rad, "spraak")) || spraakFra(felt(rad, "kategori"))
+  })).filter((r) => r.navn || r.id);
+  $("impDrop").hidden = true; $("impResult").hidden = false;
+  $("impTitle").textContent = "Leser " + fil.name + " …"; $("impInfo").textContent = ""; $("impRows").textContent = "";
+  $("impSkip").hidden = true; $("impMore").hidden = true; $("impNote").textContent = "";
+  // Japanske data hentes bare når fila har japanske kort, eller når noe ikke ble funnet blant de engelske
+  if (!LANGS.jp.data && (rå.some((r) => r.lang === "jp") || rå.some((r) => r.lang !== "en" && !finnKort(r)))) {
+    try { await loadLang("jp"); } catch (e) {}
+  }
+  const samlet = new Map(), hoppet = [];
+  const etikett = (r) => [r.navn || "Kort " + r.id, [r.sett, r.nr].filter(Boolean).join(" ")].filter(Boolean).join(", ");
+  for (const r of rå) {
+    if (r.antall <= 0) continue;
+    if (erGradert(r.grad, r.tilstand)) { hoppet.push([etikett(r), "graderte kort kjøper vi ikke per nå"]); continue; }
+    const t = finnKort(r);
+    if (!t) { hoppet.push([etikett(r), "fant ikke kortet, søk det opp selv"]); continue; }
+    if (t.flere) { hoppet.push([etikett(r), "flere kort passer, søk det opp selv"]); continue; }
+    const c = t.c, vv = velgVariant(c, r.variant);
+    if (!vv) { hoppet.push([etikett(r), "har ingen markedspris"]); continue; }
+    const usdP = usdFor(c, vv.v);
+    if (!settVises(c, usdP)) { hoppet.push([etikett(r), bulkGrunn(c)]); continue; }
+    if (rarityContact(c)) { hoppet.push([etikett(r), "ta kontakt med oss om dette kortet"]); continue; }
+    const cond = TILSTAND_TEKST(r.tilstand) || "Usikker";
+    const nøkkel = c.id + "|" + vv.v + "|" + cond;
+    const ex = samlet.get(nøkkel);
+    if (ex) ex.n = Math.min(999, ex.n + r.antall);
+    else samlet.set(nøkkel, { c, v: vv.v, cond, n: Math.min(999, r.antall), flagg: [vv.gjettet ? "sjekk varianten" : "", TILSTAND_TEKST(r.tilstand) ? "" : "tilstand mangler i fila"].filter(Boolean) });
+  }
+  impLinjer = [...samlet.values()].sort((a, b) => usdFor(b.c, b.v) - usdFor(a.c, a.v));
+  impVis = 100;
+  $("impTitle").textContent = fil.name;
+  $("impInfo").textContent = rå.length + " rader i fila";
+  $("impNote").textContent = impLinjer.length
+    ? "Se over kortene før du legger dem til. Du kan endre variant, tilstand og antall. Kort uten tilstand i fila står som «Usikker», da vurderer vi tilstanden når vi får dem."
+    : "Ingen av kortene i fila kan legges til automatisk.";
+  $("impSkip").hidden = !hoppet.length;
+  $("impSkipSum").textContent = hoppet.length + " rader ble ikke tatt med";
+  $("impSkipList").innerHTML = hoppet.map(([e, g]) => "<li>" + esc(e) + " <span>· " + esc(g) + "</span></li>").join("");
+  renderImport();
+}
+function visImportFeil(tekst) {
+  $("impDrop").hidden = true; $("impResult").hidden = false;
+  $("impTitle").textContent = "Klarte ikke å lese fila"; $("impInfo").textContent = "";
+  $("impNote").textContent = tekst; $("impRows").textContent = ""; $("impSkip").hidden = true; $("impMore").hidden = true;
+  impLinjer = []; impSum();
+}
+
+function renderImport() {
+  const box = $("impRows");
+  box.textContent = "";
+  impLinjer.slice(0, impVis).forEach((x, i) => box.appendChild(impRad(x, i)));
+  $("impMore").hidden = impLinjer.length <= impVis;
+  $("impMore").textContent = "Vis flere (" + (impLinjer.length - impVis) + " til)";
+  impSum();
+}
+function impRad(x, i) {
+  const c = x.c, ok = settKanLeggesTil(c, usdFor(c, x.v), x.cond);
+  const row = document.createElement("div");
+  row.className = "setrow";
+  row.dataset.i = i;
+  row.innerHTML = '<div class="si"><b></b><span class="sinfo"><span></span> · <a class="tcglink" target="_blank" rel="noopener">TCGplayer ↗</a></span>' +
+    '<span class="impflagg"></span><div class="impvalg"><select data-felt="v"></select><select data-felt="cond"></select></div></div><div class="sv"></div>';
+  row.querySelector(".si b").textContent = c.name + (c.lang === "jp" ? " (japansk)" : "");
+  row.querySelector(".sinfo span").textContent = [c.set.name, c.number, c.rarity].filter(Boolean).join(" · ");
+  const lenke = row.querySelector(".tcglink");
+  lenke.href = "https://www.tcgplayer.com/product/" + c.id;
+  lenke.setAttribute("aria-label", "Se " + c.name + " " + c.number + " på TCGplayer (åpnes i ny fane)");
+  row.querySelector(".impflagg").textContent = x.flagg.length ? "Obs: " + x.flagg.join(", ") : "";
+  const [vSel, cSel] = row.querySelectorAll("select");
+  vSel.setAttribute("aria-label", "Variant for " + c.name + " " + c.number);
+  vSel.innerHTML = c.variants.filter(([, u]) => u > 0).map(([v]) => '<option value="' + esc(v) + '"' + (v === x.v ? " selected" : "") + ">" + esc(VARIANT_LABEL[v] || v) + "</option>").join("");
+  vSel.disabled = vSel.options.length < 2;
+  cSel.setAttribute("aria-label", "Tilstand for " + c.name + " " + c.number);
+  cSel.innerHTML = CONFIG.conditions.map((cd) => '<option value="' + esc(cd.code) + '"' + (cd.code === x.cond ? " selected" : "") + ">" +
+    esc(cd.range ? "? Usikker" : cd.code + " – " + cd.name) + "</option>").join("");
+  row.prepend(thumb(c));
+  const usdP = usdFor(c, x.v), r = payoutRange(usdP, x.cond, mode, c.lang);
+  const cell = document.createElement("div");
+  cell.className = "svc" + (ok ? "" : " stopp") + (x.n > 0 ? " har" : "");
+  cell.innerHTML = '<span class="svn">Antall</span><span class="svp"></span>' +
+    '<div class="svq"><button type="button" data-steg="-1" aria-label="Færre">−</button>' +
+    '<input type="number" min="0" max="999" step="1" inputmode="numeric" placeholder="0">' +
+    '<button type="button" data-steg="1" aria-label="Flere">+</button></div>';
+  cell.querySelector(".svp").textContent = !ok ? "Ta kontakt" : r ? fmtRange(r[0], r[1]) : fmtKr(payout(usdP, x.cond, mode, c.lang));
+  const inp = cell.querySelector("input");
+  inp.value = x.n || "";
+  inp.setAttribute("aria-label", "Antall " + c.name + " " + c.number);
+  cell.querySelectorAll("button, input").forEach((el) => { el.disabled = !ok; });
+  row.querySelector(".sv").appendChild(cell);
+  return row;
+}
+// Linjene som kan legges til akkurat nå
+const impKlare = () => impLinjer.filter((x) => x.n > 0 && settKanLeggesTil(x.c, usdFor(x.c, x.v), x.cond));
+function impSum() {
+  let n = 0, lo = 0, hi = 0;
+  for (const x of impKlare()) {
+    const usdP = usdFor(x.c, x.v), r = payoutRange(usdP, x.cond, mode, x.c.lang), e = payout(usdP, x.cond, mode, x.c.lang);
+    n += x.n; lo += (r ? r[0] : e) * x.n; hi += (r ? r[1] : e) * x.n;
+  }
+  $("impSum").textContent = n ? n + " kort · " + totalTxt([Math.round(lo * 100) / 100, Math.round(hi * 100) / 100]) : impLinjer.length ? "Ingen kort valgt." : "";
+  $("impAdd").disabled = !n;
+  $("impAdd").textContent = n ? "Legg til " + n + " kort i tilbudet" : "Legg til i tilbudet";
+}
+
+$("tabImport").onclick = () => visVisning("import");
+$("impFile").addEventListener("change", (e) => { importerFil(e.target.files[0]); e.target.value = ""; });
+$("impDrop").addEventListener("dragover", (e) => { e.preventDefault(); $("impDrop").classList.add("over"); });
+$("impDrop").addEventListener("dragleave", () => $("impDrop").classList.remove("over"));
+$("impDrop").addEventListener("drop", (e) => { e.preventDefault(); importerFil(e.dataTransfer.files[0]); });
+$("impBack").onclick = () => { impLinjer = []; $("impResult").hidden = true; $("impDrop").hidden = false; $("importView").scrollIntoView({ block: "start" }); };
+$("impMore").onclick = () => { impVis += 100; renderImport(); };
+$("impRows").addEventListener("click", (e) => {
+  const b = e.target.closest(".svq button");
+  if (!b || b.disabled) return;
+  const inp = b.parentElement.querySelector("input");
+  inp.value = Math.max(0, Math.min(999, (Math.floor(+inp.value) || 0) + +b.dataset.steg)) || "";
+  inp.dispatchEvent(new Event("input", { bubbles: true }));
+});
+$("impRows").addEventListener("input", (e) => {
+  const inp = e.target.closest(".svq input");
+  if (!inp) return;
+  const x = impLinjer[+inp.closest(".setrow").dataset.i];
+  x.n = Math.max(0, Math.min(999, Math.floor(+inp.value || 0)));
+  inp.closest(".svc").classList.toggle("har", x.n > 0);
+  impSum();
+});
+$("impRows").addEventListener("change", (e) => {
+  const sel = e.target.closest("select[data-felt]");
+  if (!sel) return;
+  const row = sel.closest(".setrow"), i = +row.dataset.i, x = impLinjer[i];
+  x[sel.dataset.felt] = sel.value;
+  if (sel.dataset.felt === "v") x.flagg = x.flagg.filter((f) => f !== "sjekk varianten");
+  if (sel.dataset.felt === "cond") x.flagg = x.flagg.filter((f) => f !== "tilstand mangler i fila");
+  row.replaceWith(impRad(x, i));
+  impSum();
+});
+$("impAdd").onclick = () => {
+  const klare = impKlare();
+  if (!klare.length) return;
+  if (!$("donePanel").hidden) $("newOffer").click(); // som addToOffer, men lagres og tegnes bare én gang
+  let n = 0;
+  for (const x of klare) {
+    const ex = offer.find((o) => o.id === x.c.id && o.variant === x.v && o.cond === x.cond);
+    if (ex) ex.qty = Math.min(999, ex.qty + x.n);
+    else offer.push({ id: x.c.id, variant: x.v, cond: x.cond, qty: x.n, lang: x.c.lang });
+    n += x.n;
+  }
+  persist();
+  renderOffer();
+  impLinjer = impLinjer.filter((x) => !klare.includes(x));
+  renderImport();
+  $("impSum").textContent = "La til " + n + " kort i tilbudet ✓";
 };
 
 function addBulk(id, kg) {
@@ -2329,7 +2737,7 @@ function showResult(d, sent) {
     const steps = [];
     if (hold) steps.push(["Vent på bekreftelsen vår på e-post til ", d.seller.contact, "."]);
     steps.push([hold ? "Når du har fått bekreftelsen, sender du kortene til oss med en lapp med referansen." : "Send kortene til oss, med en lapp med referansen."]);
-    steps.push(["Innen 1–3 virkedager etter at vi har mottatt kortene, får du det endelige tilbudet og kjøpsbeviset på e-post" + (hold ? "." : " til "), hold ? "" : d.seller.contact, hold ? "" : "."]);
+    steps.push(["Innen 1–2 virkedager etter at vi har mottatt kortene, får du det endelige tilbudet og kjøpsbeviset på e-post" + (hold ? "." : " til "), hold ? "" : d.seller.contact, hold ? "" : "."]);
     steps.push([mode === "trade"
       ? "Godtar du, får du butikkreditten samme dag. Du kan også takke nei."
       : "Godtar du, starter utbetalingen samme dag (Vipps eller bank). Du kan også takke nei."]);
@@ -2554,7 +2962,7 @@ function tegnStatus(r) {
   if (r.needsApproval) steg.push({ id: "venter", t: "Forespørsel innsendt – avvent bekreftelse", d: "Vi går gjennom tilbudet før du sender kortene. Du får e-post når du kan sende." });
   steg.push({ id: "send", t: r.needsApproval ? "Godkjent – send pakken" : "Forespørsel innsendt – send pakken", d: "Send kortene til oss med Posten, med en lapp med referansen." });
   steg.push({ id: "transport", t: "Under transport", d: r.tracking ? "Sporingsnummer: " + r.tracking : "Pakken er på vei til oss." });
-  steg.push({ id: "mottatt", t: "Pakken har ankommet PokéNordic", d: "Vi kontrollerer kortene. Det tar 1–3 virkedager." });
+  steg.push({ id: "mottatt", t: "Pakken har ankommet PokéNordic", d: "Vi kontrollerer kortene. Det tar 1–2 virkedager." });
   steg.push({ id: "tilbud", t: "Endelig tilbud sendt", d: "Sjekk e-posten din for å godta eller avslå tilbudet." });
   if (r.status === "Avslått") steg.push({ id: "avslatt", t: "Tilbudet er avslått", d: "Vi sender kortene tilbake til deg. Returfrakten betaler du." });
   else {
