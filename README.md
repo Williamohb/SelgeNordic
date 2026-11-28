@@ -95,6 +95,20 @@ lages fra regnearket når du har kontrollert kortene, og selgeren signerer det e
 
 Avslår selgeren, blir status **Avslått**, og du får e-post med adressen kortene skal sendes tilbake til.
 
+**Status for selgeren («Sjekk status på innsending»):** selgeren åpner `selg.pokenordic.no/#status` (lenken står i
+bekreftelses-e-posten), skriver inn referanse og e-post, og ser en tidslinje og alle kortene. Statusene i fanen Tilbud:
+
+| Status | Selgeren ser | Hvem setter den |
+|---|---|---|
+| Venter på godkjenning | Forespørsel innsendt – avvent bekreftelse | portalen (over 10 000 kr eller kort som selges sjelden) |
+| Ny / Godkjent | Send pakken (med adressen) | portalen / **PokéNordic → Godkjenn valgt innsending** (sender e-post) |
+| Under transport | Under transport (med sporingsnummer) | selgeren trykker «Jeg har sendt pakken» (du får e-post) |
+| Mottatt | Pakken har ankommet, under kontroll 1–3 virkedager | **PokéNordic → Merk valgt tilbud som mottatt** (sender e-post) |
+| Endelig tilbud sendt → Godtatt → Betalt | som før | som før |
+
+Før det endelige tilbudet ser selgeren tilstanden og prisene fra innsendingen; etterpå justert tilstand,
+endelig pris og kort som ikke kjøpes. Status-kolonnen har nedtrekksliste med statusene.
+
 **Oppdatere skriptet til denne versjonen (én gang):**
 1. Lim inn hele den nye `google-apps-script/Code.gs` i Apps Script og trykk **Lagre**.
    Sjekk at `WEBAPP_URL` øverst er nettapp-adressen din (slutter på `/exec`). Lenkene til selgeren bruker den.

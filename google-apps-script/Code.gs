@@ -37,7 +37,11 @@ const OFFER_HEADERS = [
   "Estimert sum (kr)", "Alternativ sum (kr)", "USD/NOK", "Prisdato", "Kommentar"
 ];
 // Kolonner som legges til automatisk når de trengs (også i regneark laget med eldre versjon)
-const OFFER_EXTRA = ["Endelig sum (kr)", "Endelig tilbud sendt", "Token", "Signert av", "Signert tidspunkt", "Utbetaling til", "Kjøpsbevis"];
+const OFFER_EXTRA = ["Endelig sum (kr)", "Endelig tilbud sendt", "Token", "Signert av", "Signert tidspunkt", "Utbetaling til", "Kjøpsbevis",
+  "Krever godkjenning", "Sporing"];
+// Statusene i fanen «Tilbud», i rekkefølge. Selgeren ser dem på statussiden i portalen (se del 5).
+const STATUSER = ["Ny", "Venter på godkjenning", "Godkjent", "Under transport", "Mottatt", "Endelig tilbud sendt", "Godtatt", "Avslått", "Betalt"];
+const PORTAL_URL = "https://selg.pokenordic.no";  // statussiden: PORTAL_URL + "/?ref=REF#status"
 const CARD_HEADERS = [
   "Mottatt", "Referanse", "Varenr", "Kort", "Sett", "Nummer", "Variant", "Tilstand",
   "Antall", "Markedspris (USD)", "Pris/stk (kr)", "Sum (kr)", "TCGPlayer-ID", "Status"
@@ -55,6 +59,8 @@ function doPost(e) {
   try {
     const d = JSON.parse((e && e.postData && e.postData.contents) || "{}");
     if (d.api) return api_(d);  // nettbutikken (PNordic), se del 4
+    if (d.handling === "status") return statusOppslag_(d);  // statussiden i portalen, se del 5
+    if (d.handling === "sendt") return pakkeSendt_(d);
     if (d.website) return json_({ ok: true, ref: d.ref }); // honningfelle mot roboter
     validate_(d);
 
@@ -71,6 +77,7 @@ function doPost(e) {
         s.minor ? "Ja" : "Nei", s.guardianName || "", s.guardianContact || "",
         d.modeName, d.rate, d.count, d.total, d.altTotal, d.usdNok, d.pricesDate, s.note || ""
       ].map(safe_));
+      setOffer_(ss, offers.getLastRow(), { "Krever godkjenning": d.needsApproval ? "Ja" : "Nei" });
       const rows = d.lines.map((l) => [
         now, d.ref, l.nr, l.name, l.set, l.number, l.variant, l.cond,
         l.qty, l.usd, l.each, l.sum, l.tcgId, "Ny"
@@ -206,8 +213,19 @@ function onOpen() {
       checkbox_(sh.getRange(2, c["Kontrollert"], sh.getLastRow() - 1, 1));
     }
   } catch (err) {}
+  // Nedtrekksliste med statusene i fanen Tilbud (andre verdier er fortsatt lov)
+  try {
+    const t = SpreadsheetApp.getActiveSpreadsheet().getSheetByName("Tilbud");
+    if (t && t.getLastRow() >= 2) {
+      const tc = cols_(t, OFFER_EXTRA);
+      t.getRange(2, tc["Status"], t.getLastRow() - 1, 1)
+        .setDataValidation(SpreadsheetApp.newDataValidation().requireValueInList(STATUSER, true).setAllowInvalid(true).build());
+    }
+  } catch (err) {}
   SpreadsheetApp.getUi()
     .createMenu("PokéNordic")
+    .addItem("Godkjenn valgt innsending (kan sendes)", "approveOffer")
+    .addItem("Merk valgt tilbud som mottatt", "markReceived")
     .addItem("Send endelig tilbud for valgt tilbud", "sendFinalOffer")
     .addItem("Merk valgt tilbud som betalt", "markPaid")
     .addSeparator()
@@ -396,6 +414,133 @@ function markPaid() {
   if (offer.status !== "Godtatt") { ui.alert("Bare godtatte tilbud kan merkes som betalt. Status nå: " + offer.status); return; }
   setOffer_(ss, rowNum, { "Status": "Betalt" });
   ui.alert("Tilbud #" + offer.ref + " er merket som betalt.\n\nKortene kan nå lastes opp fra fanen «Innkjøp» på PNordic-opplastingssiden.");
+}
+
+/* ======================================================================
+   5. Status på innsendingen (statussiden i portalen) og nye menyvalg
+   ====================================================================== */
+// Selgeren slår opp innsendingen med referanse + e-postadressen fra innsendingen. Svaret har ingen
+// personopplysninger utover det selgeren selv sendte inn. Statusflyten:
+//   Venter på godkjenning -> Godkjent -> (selgeren trykker «Jeg har sendt pakken») Under transport -> Mottatt
+//   -> Endelig tilbud sendt -> Godtatt -> Betalt          (uten godkjenning starter den på «Ny»)
+const statusLenke_ = (ref) => PORTAL_URL + "/?ref=" + encodeURIComponent(ref) + "#status";
+
+function finnInnsending_(ss, d) {
+  const ref = String(d.ref || "").trim().toUpperCase().replace(/^#/, "");
+  const epost = String(d.e || "").trim().toLowerCase();
+  if (!/^[A-Z0-9]{5}$/.test(ref) || !epost) return null;
+  const rowNum = findOfferRow_(ss, ref);
+  const o = rowNum ? readOffer_(ss, rowNum) : null;
+  return o && o.contact.toLowerCase() === epost ? o : null;
+}
+
+function statusOppslag_(d) {
+  const ss = SpreadsheetApp.getActiveSpreadsheet();
+  const o = finnInnsending_(ss, d);
+  if (!o) {
+    Utilities.sleep(500);  // gjør det tregt å prøve mange referanser
+    return json_({ ok: false, error: "Fant ingen innsending med denne referansen og e-postadressen. Sjekk at begge er skrevet riktig." });
+  }
+  const endelig = ["Endelig tilbud sendt", "Godtatt", "Betalt", "Avslått"].indexOf(o.status) >= 0;
+  return json_({
+    ok: true, ref: o.ref, status: o.status, needsApproval: o.needsApproval, tracking: o.tracking, mode: o.mode,
+    received: o.received instanceof Date ? Utilities.formatDate(o.received, TZ, "dd.MM.yyyy") : String(o.received || ""),
+    estimate: o.estimate, finalTotal: endelig ? o.finalTotal : 0, final: endelig,
+    shipTo: { name: BUYER.name, address: BUYER.address, phone: BUYER.phone },
+    lines: statusLinjer_(ss, o.ref, endelig)
+  });
+}
+
+// Kortene i innsendingen. Før det endelige tilbudet vises det selgeren oppga (tilstand og innsendt pris), så
+// kontrollen ikke vises halvferdig; etterpå justert tilstand, endelig pris og kort vi ikke kjøper.
+function statusLinjer_(ss, ref, endelig) {
+  const sh = ss.getSheetByName("Kort");
+  if (!sh || sh.getLastRow() < 2) return [];
+  const c = cols_(sh, []);
+  const out = [];
+  sh.getRange(2, 1, sh.getLastRow() - 1, sh.getLastColumn()).getValues().forEach((r) => {
+    const g = (h) => (c[h] ? r[c[h] - 1] : "");
+    if (String(g("Referanse")) !== String(ref)) return;
+    const bulk = String(g("Variant")) === "per kg";
+    const given = String(g("Tilstand")), adjusted = bulk ? "" : String(g("Justert tilstand") || "").trim();
+    const qty = num_(g("Antall"));
+    const innsendt = g("Innsendt pris/stk (kr)") === "" ? num_(g("Pris/stk (kr)")) : num_(g("Innsendt pris/stk (kr)"));
+    const each = endelig ? num_(g("Pris/stk (kr)")) : innsendt;
+    out.push({
+      nr: String(g("Varenr")), name: String(g("Kort")), set: String(g("Sett")), number: String(g("Nummer")), variant: String(g("Variant")),
+      givenCond: given, cond: endelig && adjusted ? adjusted : given, changed: endelig && !!adjusted && adjusted.toUpperCase() !== given.toUpperCase(),
+      qty: qty, each: each, sum: round2_(qty * each), bulk: bulk, rejected: endelig && /avvist/i.test(String(g("Status")))
+    });
+  });
+  return out;
+}
+
+// «Jeg har sendt pakken» på statussiden: status Under transport, med sporingsnummer hvis selgeren oppga det
+function pakkeSendt_(d) {
+  const ss = SpreadsheetApp.getActiveSpreadsheet();
+  const lock = LockService.getScriptLock();
+  lock.waitLock(20000);
+  try {
+    const o = finnInnsending_(ss, d);
+    if (!o) return json_({ ok: false, error: "Fant ingen innsending med denne referansen og e-postadressen." });
+    if (o.status === "Venter på godkjenning") return json_({ ok: false, error: "Vent med å sende til vi har godkjent innsendingen. Du får e-post fra oss." });
+    if (["Ny", "Godkjent"].indexOf(o.status) < 0) return json_({ ok: true, status: o.status });
+    const sporing = String(d.tracking || "").trim().slice(0, 60);
+    setOffer_(ss, o.row, { "Status": "Under transport", "Sporing": safe_(sporing) });
+    sendMail_({ to: OWNER_EMAIL, subject: "📦 Pakke sendt – tilbud #" + o.ref + " – " + o.name, name: SENDER_NAME,
+      htmlBody: "<p>" + esc_(o.name) + " har sendt kortene for tilbud #" + esc_(o.ref) + ".</p>" +
+        (sporing ? "<p>Sporingsnummer: <b>" + esc_(sporing) + "</b></p>" : "<p>Ingen sporingsnummer oppgitt.</p>") +
+        "<p>Velg PokéNordic → «Merk valgt tilbud som mottatt» når pakken kommer.</p>" });
+    return json_({ ok: true, status: "Under transport" });
+  } finally {
+    lock.releaseLock();
+  }
+}
+
+// Menyvalg: tilbud som ventet på godkjenning, kan sendes. Selgeren får e-post med adressen.
+function approveOffer() {
+  const ui = SpreadsheetApp.getUi();
+  const ss = SpreadsheetApp.getActiveSpreadsheet();
+  const sh = ss.getActiveSheet();
+  if (sh.getName() !== "Tilbud") { ui.alert("Gå til fanen «Tilbud» og klikk på raden først."); return; }
+  const rowNum = sh.getActiveRange().getRow();
+  if (rowNum < 2) return;
+  const o = readOffer_(ss, rowNum);
+  if (o.status !== "Venter på godkjenning") { ui.alert("Bare tilbud som venter på godkjenning, kan godkjennes. Status nå: " + o.status); return; }
+  if (ui.alert("Godkjenne tilbud #" + o.ref + "?", o.name + " får e-post om at kortene kan sendes.", ui.ButtonSet.YES_NO) !== ui.Button.YES) return;
+  setOffer_(ss, rowNum, { "Status": "Godkjent" });
+  if (isEmail_(o.contact)) {
+    sendMail_({ to: o.contact, subject: "Du kan nå sende kortene – tilbud #" + o.ref, replyTo: OWNER_EMAIL, name: SENDER_NAME,
+      htmlBody: '<div style="font-family:Arial,sans-serif;font-size:14px;color:#111"><p>Hei ' + esc_(o.name) + "!</p>" +
+        "<p>Vi har gått gjennom tilbud <b>#" + esc_(o.ref) + "</b>, og du kan nå sende kortene til oss med Posten. Legg ved en lapp med referansen.</p>" +
+        '<p style="background:#F2F6FC;border:1px solid #D6DFEC;padding:10px 12px;border-radius:6px"><b>Send til:</b><br>' + esc_(BUYER.name) + "<br>" +
+        esc_(BUYER.address).replace(", ", "<br>") + (BUYER.phone ? "<br>" + esc_(BUYER.phone) : "") + "</p>" +
+        '<p>Følg innsendingen og trykk «Jeg har sendt pakken» når den er sendt: <a href="' + statusLenke_(o.ref) + '">' + statusLenke_(o.ref) + "</a></p>" +
+        "<p>Hilsen PokéNordic</p></div>" });
+  }
+  ui.alert("Tilbud #" + o.ref + " er godkjent" + (isEmail_(o.contact) ? ", og " + o.contact + " har fått e-post." : "."));
+}
+
+// Menyvalg: pakken har kommet. Selgeren ser «under kontroll (1–3 virkedager)» på statussiden og får e-post.
+function markReceived() {
+  const ui = SpreadsheetApp.getUi();
+  const ss = SpreadsheetApp.getActiveSpreadsheet();
+  const sh = ss.getActiveSheet();
+  if (sh.getName() !== "Tilbud") { ui.alert("Gå til fanen «Tilbud» og klikk på raden først."); return; }
+  const rowNum = sh.getActiveRange().getRow();
+  if (rowNum < 2) return;
+  const o = readOffer_(ss, rowNum);
+  if (["Ny", "Venter på godkjenning", "Godkjent", "Under transport"].indexOf(o.status) < 0) {
+    ui.alert("Tilbud #" + o.ref + " har status «" + o.status + "», så det kan ikke merkes som mottatt."); return;
+  }
+  setOffer_(ss, rowNum, { "Status": "Mottatt" });
+  if (isEmail_(o.contact)) {
+    sendMail_({ to: o.contact, subject: "Vi har mottatt kortene dine – tilbud #" + o.ref, replyTo: OWNER_EMAIL, name: SENDER_NAME,
+      htmlBody: '<div style="font-family:Arial,sans-serif;font-size:14px;color:#111"><p>Hei ' + esc_(o.name) + "!</p>" +
+        "<p>Pakken med kortene for tilbud <b>#" + esc_(o.ref) + "</b> har kommet fram. Vi kontrollerer kortene, og du får det endelige tilbudet på e-post innen 1–3 virkedager.</p>" +
+        '<p>Følg innsendingen: <a href="' + statusLenke_(o.ref) + '">' + statusLenke_(o.ref) + "</a></p><p>Hilsen PokéNordic</p></div>" });
+  }
+  ui.alert("Tilbud #" + o.ref + " er merket som mottatt" + (isEmail_(o.contact) ? ", og selgeren har fått e-post." : "."));
 }
 
 /* ======================================================================
@@ -691,7 +836,9 @@ function readOffer_(ss, rowNum) {
     street: String(g("Adresse")), zip: String(g("Postnr")), city: String(g("Poststed")),
     minor: String(g("Under 18")) === "Ja", guardian: String(g("Foresatt")), guardianContact: String(g("Foresatt kontakt")),
     mode: String(g("Oppgjør")), estimate: Number(g("Estimert sum (kr)")) || 0, finalTotal: Number(g("Endelig sum (kr)")) || 0,
-    token: String(g("Token") || ""), received: g("Mottatt")
+    token: String(g("Token") || ""), received: g("Mottatt"),
+    needsApproval: String(g("Krever godkjenning")) === "Ja" || ["Venter på godkjenning", "Godkjent"].indexOf(String(g("Status"))) >= 0,
+    tracking: String(g("Sporing") || "")
   };
 }
 
@@ -913,7 +1060,8 @@ function mailHtml_(d, forOwner) {
       "<p>Når kortene kommer, dobbeltsjekker vi tilstanden. Stemmer den med det du har oppgitt, utbetaler vi etter estimatet. Er tilstanden bedre enn oppgitt, justerer vi tilbudet opp. " +
       "Er den dårligere, får du et justert tilbud på e-post som du kan godta eller avslå før noe er avtalt.</p>" +
       "<p><b>Dette har du sendt inn:</b></p>";
-  const closing = forOwner ? "" : "<p>Har du spørsmål, er det bare å svare på denne e-posten.</p><p>Med vennlig hilsen<br>PokéNordic</p>";
+  const closing = forOwner ? "" : '<p>Følg innsendingen din her (bruk e-postadressen du sendte inn med): <a href="' + statusLenke_(d.ref) + '">' + statusLenke_(d.ref) + "</a></p>" +
+    "<p>Har du spørsmål, er det bare å svare på denne e-posten.</p><p>Med vennlig hilsen<br>PokéNordic</p>";
   const sellerBlock = forOwner
     ? "<p><b>Selger:</b> " + esc_(s.name) + "<br>" + esc_(s.street) + ", " + esc_(s.zip) + " " + esc_(s.city) + "<br>" + esc_(s.contact) +
       (s.minor ? "<br><b>Under 18 år.</b> Foresatt: " + esc_(s.guardianName) + " – " + esc_(s.guardianContact) : "<br>18 år eller eldre") + "</p>"

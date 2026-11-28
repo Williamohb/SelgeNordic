@@ -281,7 +281,64 @@ h1 { font-family: var(--font-display); font-weight: 800; font-size: clamp(30px, 
 /* ---- Toppen i butikkstilen: rolig marineblå flate som bannerne i butikken, uten pynt.
    Utbetaling/Innbytte ligger inni; det valgte får gul kant og gul prikk (gult har god kontrast på marineblått). ---- */
 .herofakta { display: none; }
-/* «Slik fungerer det»: hopper ned til de fem stegene. Vises der logolinja (med samme lenke) er skjult. */
+/* ---- Status på innsendingen ---- */
+.sr { position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0); white-space: nowrap; }
+.st-tabell td.mono { font-family: var(--font-mono); font-size: 13px; white-space: nowrap; }
+.vis-status header.top, .vis-status .grid, .vis-status .info, .vis-status .receipt-wrap, .vis-status .mobilebar { display: none !important; }
+.statusview { margin: 32px 0 64px; max-width: 900px; }
+.statusview h1 { margin-top: 16px; }
+.statusform { display: grid; grid-template-columns: 160px minmax(0, 1fr) auto; gap: 12px; align-items: end; margin-top: 24px; }
+@media (max-width: 640px) { .statusform { grid-template-columns: minmax(0, 1fr); } .statusform .btn { width: 100%; } }
+.statusform label { display: grid; gap: 4px; font-size: 14px; font-weight: 600; }
+.statusform input { font: inherit; font-size: 16px; height: 48px; padding: 0 12px; border-radius: var(--radius-s); border: 1.5px solid var(--line-strong); background: var(--surface); color: var(--ink); width: 100%; }
+.statusform input:focus { outline: none; border-color: var(--accent); box-shadow: 0 0 0 3px color-mix(in srgb, var(--accent) 22%, transparent); }
+#stRef { text-transform: uppercase; font-family: var(--font-mono); letter-spacing: .06em; }
+.statusform .btn { height: 48px; }
+#statusMsg { margin-top: 12px; min-height: 1.2em; }
+.st-kort { margin-top: 24px; background: var(--surface); border: 1px solid var(--line); border-radius: var(--radius); padding: 24px; }
+.st-hode { display: flex; flex-wrap: wrap; justify-content: space-between; align-items: baseline; gap: 8px 24px; }
+.st-hode h2 { font-family: var(--font-display); font-weight: 800; font-size: 24px; margin: 0; letter-spacing: -0.02em; }
+.st-hode span { color: var(--muted); font-size: 14px; }
+.st-banner { margin-top: 16px; padding: 12px 16px; border-radius: var(--radius-s); background: color-mix(in srgb, var(--warn) 10%, var(--surface)); border: 1px solid color-mix(in srgb, var(--warn) 40%, var(--line)); }
+.tidslinje { list-style: none; margin: 24px 0 0; padding: 0; display: grid; gap: 0; }
+.tidslinje li { position: relative; display: grid; grid-template-columns: 28px minmax(0, 1fr); column-gap: 16px; padding-bottom: 20px; }
+.tidslinje li:last-child { padding-bottom: 0; }
+.tidslinje li::after { content: ""; position: absolute; left: 13px; top: 28px; bottom: 0; width: 2px; background: var(--line-strong); }
+.tidslinje li:last-child::after { display: none; }
+.tidslinje li.ferdig::after { background: var(--accent); }
+.tidslinje .prikk { width: 28px; height: 28px; border-radius: 50%; display: grid; place-items: center; border: 2px solid var(--line-strong); background: var(--surface); color: transparent; }
+.tidslinje li.ferdig .prikk { background: var(--accent); border-color: var(--accent); color: #FFFFFF; }
+.tidslinje li.nå .prikk { border-color: var(--accent); box-shadow: 0 0 0 4px color-mix(in srgb, var(--accent) 20%, transparent); }
+.tidslinje li.nå .prikk::before { content: ""; width: 10px; height: 10px; border-radius: 50%; background: var(--accent); }
+.tidslinje b { display: block; font-size: 16px; padding-top: 2px; }
+.tidslinje li.senere b { color: var(--muted); font-weight: 500; }
+.tidslinje .tekst { font-size: 14px; color: var(--muted); }
+.tidslinje li.senere .tekst { display: none; }
+.st-send { margin-top: 12px; padding: 16px; border-radius: var(--radius-s); background: var(--sunk); display: grid; gap: 12px; }
+.st-send address { font-style: normal; font-size: 15px; }
+.st-send form { display: flex; flex-wrap: wrap; gap: 8px; }
+.st-send input { flex: 1; min-width: 180px; font: inherit; font-size: 16px; height: 44px; padding: 0 12px; border-radius: var(--radius-s); border: 1.5px solid var(--line-strong); background: var(--surface); color: var(--ink); }
+.st-sum { display: flex; flex-wrap: wrap; gap: 8px 32px; margin-top: 24px; padding-top: 16px; border-top: 1px solid var(--line); }
+.st-sum div { display: grid; }
+.st-sum span { font-size: 13px; color: var(--muted); }
+.st-sum b { font-size: 22px; font-variant-numeric: tabular-nums; }
+.st-tabell { margin-top: 16px; overflow-x: auto; }
+.st-tabell table { width: 100%; border-collapse: collapse; font-size: 14px; font-variant-numeric: tabular-nums; min-width: 560px; }
+.st-tabell th { text-align: left; font-size: 13px; font-weight: 600; color: var(--muted); padding: 8px; border-bottom: 1px solid var(--line-strong); }
+.st-tabell td { padding: 10px 8px; border-bottom: 1px solid var(--line); vertical-align: top; }
+.st-tabell td.num, .st-tabell th.num { text-align: right; white-space: nowrap; }
+.st-tabell td small { display: block; color: var(--muted); font-size: 13px; }
+.st-tabell tr.avvist td { color: var(--muted); }
+.st-tabell tr.avvist .kortnavn { text-decoration: line-through; }
+.st-merk { display: inline-block; font-size: 13px; font-weight: 600; padding: 1px 8px; border-radius: 999px; background: color-mix(in srgb, var(--warn) 14%, var(--surface)); color: var(--warn); margin-top: 4px; }
+.butikkstil .tidslinje li.ferdig .prikk, .butikkstil .tidslinje li.ferdig::after { background: var(--marine); border-color: var(--marine); }
+.butikkstil .tidslinje li.nå .prikk { border-color: var(--marine); box-shadow: 0 0 0 4px rgba(255, 201, 60, .55); }
+.butikkstil .tidslinje li.nå .prikk::before { background: var(--marine); }
+
+/* «Slik fungerer det» og «Sjekk status»: lenker i heroen. Vises der logolinja (med de samme lenkene) er skjult. */
+.herolinks { display: contents; }
+.butikkstil .herolinks, .i-butikken .herolinks { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 20px; }
+.butikkstil .herolinks .herolink, .i-butikken .herolinks .herolink { margin-top: 0; }
 .herolink { display: none; }
 .butikkstil .herolink, .i-butikken .herolink {
   display: inline-flex; align-items: center; gap: 8px; margin-top: 20px; min-height: 44px; padding: 0 20px; border-radius: 999px;
@@ -735,7 +792,7 @@ ol.steps span { font-size: 14px; color: var(--muted); }
 <div class="wrap">
   <div class="brandbar">
     <img class="logo" src="logo.webp" alt="PokéNordic" width="156" height="54">
-    <div class="brandnav"><span class="tag">Innkjøp av Pokémon-kort</span><a class="navlink" href="#slik">Slik fungerer det</a><a class="navbtn" id="shopLink" href="https://pokenordic.no"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M19 12H5"></path><path d="m11 18-6-6 6-6"></path></svg>Til nettbutikken</a></div>
+    <div class="brandnav"><span class="tag">Innkjøp av Pokémon-kort</span><a class="navlink" href="#slik">Slik fungerer det</a><a class="navlink" href="#status">Sjekk status</a><a class="navbtn" id="shopLink" href="https://pokenordic.no"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M19 12H5"></path><path d="m11 18-6-6 6-6"></path></svg>Til nettbutikken</a></div>
   </div>
 
   <header class="top">
@@ -743,7 +800,10 @@ ol.steps span { font-size: 14px; color: var(--muted); }
       <h1>Få penger eller nye produkter for Pokémon-kortene dine</h1>
       <p class="lede">Søk opp kortene, velg variant og tilstand, og se prisen med en gang. Prisene følger TCGPlayer-markedet og oppdateres daglig.</p>
       <p class="herofakta">Gratis og uforpliktende. Svar innen 1–3 virkedager etter at vi har fått kortene, og utbetaling samme dag som du godtar.</p>
-      <a class="herolink" href="#slik">Slik fungerer det <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 5v14"/><path d="m6 13 6 6 6-6"/></svg></a>
+      <div class="herolinks">
+        <a class="herolink" href="#slik">Slik fungerer det <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 5v14"/><path d="m6 13 6 6 6-6"/></svg></a>
+        <a class="herolink" href="#status">Sjekk status på innsending</a>
+      </div>
       <div class="meta" id="meta"><span>Laster priser …</span></div>
     </div>
     <div class="modes" role="radiogroup" aria-label="Hvordan vil du få betalt?">
@@ -763,6 +823,20 @@ ol.steps span { font-size: 14px; color: var(--muted); }
     </div>
   </header>
 
+
+  <!-- Status på innsendingen: vises med #status i adressen (lenken i e-posten er ?ref=XXXXX#status) -->
+  <section class="statusview" id="statusView" hidden aria-labelledby="statusTitle">
+    <button type="button" class="linkbtn" id="statusBack">← Tilbake til portalen</button>
+    <h1 id="statusTitle">Sjekk status på innsendingen</h1>
+    <p class="lede">Skriv inn referansen fra kvitteringen (f.eks. AB12C) og e-postadressen du sendte inn med.</p>
+    <form class="statusform" id="statusForm" novalidate>
+      <label for="stRef">Referanse <input id="stRef" type="text" maxlength="6" autocomplete="off" autocapitalize="characters" spellcheck="false" placeholder="AB12C"></label>
+      <label for="stEpost">E-post <input id="stEpost" type="email" autocomplete="email" placeholder="ola@eksempel.no"></label>
+      <button class="btn" type="submit" id="stGo">Sjekk status</button>
+    </form>
+    <p class="fineprint" id="statusMsg" role="status"></p>
+    <div id="statusResult" hidden></div>
+  </section>
 
   <div class="grid">
     <main>
@@ -889,7 +963,7 @@ ol.steps span { font-size: 14px; color: var(--muted); }
         <p id="doneSum"></p>
         <p class="done-hold" id="doneHold" hidden><b>Ikke send kortene ennå.</b> Tilbud over <span class="approvalAmount">10 000 kr</span> går vi gjennom før du sender. Du får en bekreftelse fra oss på e-post.</p>
         <ol class="done-steps" id="doneSteps"></ol>
-        <p class="fineprint"><a class="ext" href="#slik" id="doneHow">Slik pakker og sender du kortene</a></p>
+        <p class="fineprint"><a class="ext" href="#status" id="doneStatus">Følg innsendingen din</a> · <a class="ext" href="#slik" id="doneHow">Slik pakker og sender du kortene</a></p>
         <p class="fineprint">Spørsmål? Skriv til <b>kundeservice@pokenordic.no</b> og oppgi referansen.</p>
         <div class="actions">
           <button class="btn" type="button" id="donePdf" hidden>Last ned tilbudsoversikt</button>
@@ -975,7 +1049,7 @@ ol.steps span { font-size: 14px; color: var(--muted); }
       </div>
       <div class="qa">
         <h4>Kan jeg sende kortene med en gang?</h4>
-        <p>Ja, hvis tilbudet er på <span class="approvalAmount">10 000 kr</span> eller mindre. Er det over, går vi gjennom tilbudet først og sender deg en bekreftelse på e-post. Vent med å sende til du har fått den.</p>
+        <p>Ja, hvis tilbudet er på <span class="approvalAmount">10 000 kr</span> eller mindre. Er det over, eller har det kort som selges sjelden (som Cracked Ice-utgaver), går vi gjennom tilbudet først og sender deg en bekreftelse på e-post. Vent med å sende til du har fått den.</p>
       </div>
       <div class="qa">
         <h4>Hvor lang tid tar det?</h4>
@@ -1021,7 +1095,11 @@ const CONFIG = {
   setLowRarities: ["Common", "Uncommon", "Rare", "Holo Rare", "Common Holo", "Promo", "None", "Unconfirmed", ""],
   setEnergyMinNok: 20,              // basisenergi («Basic Fire Energy») vises bare fra denne verdien (f.eks. gull-energi)
   setHideJpRarities: ["Pikachu Rare"], // japanske sjeldenheter som aldri vises i settoversikten
-  hiddenSets: [/^jumbo cards$/i],   // sett som ikke vises noe sted i portalen (søk, populære kort, settoversikt)
+  hiddenSets: [/^jumbo cards$/i],
+  // Utgaver som nesten aldri selges, så markedsprisen bygger på ett eller to salg (f.eks. Chandelure Cracked Ice til 300 dollar).
+  // De kan legges i tilbudet («Pris bekreftes av oss»), men tilbudet venter da på godkjenning før kortene sendes,
+  // som tilbud over approvalNok. Legg til flere ved behov, f.eks. /\(cosmos holo\)/i.
+  contactNames: [/\(cracked ice holo\)/i],   // sett som ikke vises noe sted i portalen (søk, populære kort, settoversikt)
   shopUrl: "https://pokenordic.no", // lenke til nettbutikken (knappen øverst og «nettbutikken» under innbytte); null = skjul
   conditions: [                     // trekk for tilstand, ganges med satsen over
     { code: "NM",  name: "Near Mint",         factor: 1.00, desc: "Som nytt. Skarpe hjørner, ingen riper. Høyst et par bittesmå hvite prikker på baksidekanten." },
@@ -1189,12 +1267,18 @@ function overCap(usdPrice, condCode, l = "en") {
   return !!capFor(l) && payout(usdPrice, cd.range ? cd.range[1] : condCode, "cash", l) > capFor(l);
 }
 // Japanske kort med visse sjeldenhetsgrader (f.eks. Mega Ultra Rare) kjøpes bare etter avtale
+// Utgaver som nesten aldri selges (CONFIG.contactNames): markedsprisen bygger på svært få salg, så de kjøpes etter avtale
+function sjeldenSolgt(c) {
+  return !!c && (CONFIG.contactNames || []).some((re) => re.test(c.name));
+}
 function rarityContact(c) {
   return !!c && c.lang === "jp" && (CONFIG.jpContactRarities || []).includes(c.rarity);
 }
+// Har tilbudet kort som selges sjelden? Da må vi bekrefte prisen før kortene sendes, som for store tilbud.
+const harSjeldenSolgt = () => offer.some((o) => !o.bulk && sjeldenSolgt(BYID.get(o.id)));
 // Store tilbud må godkjennes før kortene sendes. Summen regnes alltid som utbetaling, så den ikke avhenger av valget.
 function needsApproval(d) {
-  return !!CONFIG.approvalNok && offerRange("cash")[1] > CONFIG.approvalNok;  // med «Usikker»: toppen av spennet
+  return (!!CONFIG.approvalNok && offerRange("cash")[1] > CONFIG.approvalNok) || harSjeldenSolgt();  // med «Usikker»: toppen av spennet
 }
 const approvalTxt = () => nok.format(CONFIG.approvalNok).replace(",00", "") + " kr";
 const capTxt = (l = "en") => nok.format(capFor(l)).replace(",00", "") + " kr";
@@ -1320,6 +1404,7 @@ async function load() {
   setMode(mode, false);
   renderOffer();
   await setLang(savedLang === "jp" && LANGS.jp.data ? "jp" : "en", false);
+  statusFraAdresse();  // lenken i e-posten (?ref=XXXXX#status) åpner statussiden
 }
 
 /* ---------- Søk ---------- */
@@ -1382,6 +1467,7 @@ function renderRow(c) {
     '<span class="cname"></span>' +
     '<span class="cprice">' + (!top ? "<small>Ingen markedspris</small>"
       : rarityContact(c) ? "<b class='capped'>Ta kontakt</b><small>" + esc(c.rarity) + "</small>"
+      : sjeldenSolgt(c) && !overCap(top, "NM", c.lang) ? "<b>" + fmtKr(payout(top, "NM", mode, c.lang)) + "</b><small class='capped'>Pris bekreftes av oss</small>"
       : overCap(top, "NM", c.lang) ? "<b>" + fmtKr(payout(top, "NM", mode, c.lang)) + "</b><small class='capped'>Ta kontakt, over " + capTxt(c.lang) + "</small>"
       : "<b>" + fmtKr(payout(top, "NM", mode, c.lang)) + "</b><small>" + MODE[mode].name + ", NM</small>") + "</span>" +
     '<span class="csub"><span class="sname"></span> · <span class="num"></span><span class="rar"></span></span>';
@@ -1462,6 +1548,12 @@ function renderDetail(c) {
     capNote.className = "calc cap";
     capNote.innerHTML = '<div class="steps"><span><b>' + (c.lang === "jp" ? "Japanske kort" : "Kort") + " med utbetalingsverdi over " + capTxt(c.lang) +
       " kjøper vi etter avtale.</b></span><span>Send en e-post til <span class='mail'>kundeservice@pokenordic.no</span> med kortnavn, sett og tilstand, så gir vi deg et tilbud.</span></div>";
+  } else if (sjeldenSolgt(c) && price) {
+    // Kan legges til, men tilbudet venter på godkjenning før kortene sendes (som tilbud over 10 000 kr)
+    capNote = document.createElement("div");
+    capNote.className = "calc cap";
+    capNote.innerHTML = "<div class=\"steps\"><span><b>Denne utgaven selges sjelden, så markedsprisen er usikker.</b></span>" +
+      "<span>Du kan legge den i tilbudet, men vent med å sende kortene til vi har bekreftet prisen på e-post.</span></div>";
   }
   if (byRarity) {
     calc.classList.add("cap");
@@ -2112,7 +2204,7 @@ function buildText(d) {
   lines.push("Antall: " + countTxt(count, d.kg));
   lines.push(MODE[mode].total + ": " + totalTxt(d.range));
   if (d.range[0] !== d.range[1]) lines.push("Kort merket «Usikker» vurderer dere: spenn fra Near Mint til Damaged.");
-  if (needsApproval(d)) lines.push("Over " + approvalTxt() + ": venter på bekreftelse før kortene sendes.");
+  if (needsApproval(d)) lines.push((harSjeldenSolgt() ? "Har kort som selges sjelden (usikker pris)" : "Over " + approvalTxt()) + ": venter på bekreftelse før kortene sendes.");
   lines.push("(" + MODE[other(mode)].name + " ville gitt " + totalTxt(offerRange(other(mode))) + ")");
   if (note) { lines.push(""); lines.push("Kommentar: " + note); }
   lines.push("");
@@ -2154,6 +2246,7 @@ $("sendForm").addEventListener("submit", async (e) => {
       const r = await res.json();
       if (!r.ok) throw new Error(r.error || "ukjent feil");
       try { localStorage.setItem(STORE_KEY + "-sent", String(Date.now())); } catch (err) {}
+      try { localStorage.setItem(STORE_KEY + "-sistref", deal.ref); } catch (err) {}  // fylles inn på statussiden
       showResult(deal, true);
       btn.textContent = "Sendt ✓";
       return;
@@ -2210,6 +2303,14 @@ function showResult(d, sent) {
       ol.appendChild(li);
     });
     $("doneHold").hidden = !hold;
+    if (hold) {
+      const stor = !!CONFIG.approvalNok && offerRange("cash")[1] > CONFIG.approvalNok, sjelden = harSjeldenSolgt();
+      $("doneHold").innerHTML = "<b>Ikke send kortene ennå.</b> " +
+        (stor && sjelden ? "Tilbudet er over " + esc(approvalTxt()) + " og har kort som selges sjelden, så vi går gjennom det først."
+          : sjelden ? "Tilbudet har kort som selges sjelden, så markedsprisen er usikker. Vi bekrefter prisen før du sender."
+          : "Tilbud over " + esc(approvalTxt()) + " går vi gjennom før du sender.") +
+        " Du får en bekreftelse fra oss på e-post.";
+    }
     $("donePanel").classList.toggle("hold", hold);
     $("donePanel").querySelector("h3").textContent = hold ? "Tilbudet er mottatt" : "Tilbudet er innsendt";
     $("sendForm").hidden = true;
@@ -2343,6 +2444,118 @@ async function downloadReceipt(btn) {
     window.scrollTo(0, scrollPos);
   }
 }
+/* ---------- Status på innsendingen (#status) ---------- */
+// Slår opp innsendingen i regnearket med referanse + e-post (Code.gs: statusOppslag_) og viser en tidslinje og kortene.
+async function postTilSkriptet(data) {
+  const res = await fetch(CONFIG.submitUrl, { method: "POST", headers: { "Content-Type": "text/plain;charset=utf-8" }, body: JSON.stringify(data) });
+  return res.json();
+}
+function visStatusSide(på) {
+  document.documentElement.classList.toggle("vis-status", på);
+  $("statusView").hidden = !på;
+  if (!på) return;
+  const p = new URLSearchParams(location.search);
+  let sist = "";
+  try { sist = localStorage.getItem(STORE_KEY + "-sistref") || ""; } catch (e) {}
+  if (!$("stRef").value) $("stRef").value = (p.get("ref") || sist || "").toUpperCase().slice(0, 6);
+  if (!$("stEpost").value) $("stEpost").value = $("sellerContact").value || "";
+  window.scrollTo(0, 0);
+  if ($("stRef").value && $("stEpost").value && $("statusResult").hidden) hentStatus();
+  else ($("stRef").value ? $("stEpost") : $("stRef")).focus();
+}
+function statusFraAdresse() { visStatusSide(location.hash === "#status"); }
+window.addEventListener("hashchange", statusFraAdresse);
+$("statusBack").addEventListener("click", () => {
+  history.pushState(null, "", location.pathname + location.search);
+  visStatusSide(false);
+  window.scrollTo(0, 0);
+});
+
+let STATUS = null;  // siste svar, for «Jeg har sendt pakken»
+async function hentStatus() {
+  const ref = $("stRef").value.trim().toUpperCase().replace(/^#/, ""), e = $("stEpost").value.trim();
+  const msg = $("statusMsg");
+  msg.style.color = "";
+  if (!/^[A-Z0-9]{5}$/.test(ref)) { msg.textContent = "Referansen har fem tegn, for eksempel AB12C."; msg.style.color = "var(--warn)"; $("stRef").focus(); return; }
+  if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(e)) { msg.textContent = "Skriv inn e-postadressen du sendte inn med."; msg.style.color = "var(--warn)"; $("stEpost").focus(); return; }
+  if (!CAN_SUBMIT) { msg.textContent = "Statussiden virker bare på selg.pokenordic.no."; return; }
+  $("stGo").disabled = true; msg.textContent = "Henter status …";
+  try {
+    const r = await postTilSkriptet({ handling: "status", ref, e });
+    if (!r.ok) { msg.textContent = r.error || "Fant ikke innsendingen."; msg.style.color = "var(--warn)"; $("statusResult").hidden = true; return; }
+    STATUS = { ...r, e };
+    msg.textContent = "";
+    tegnStatus(STATUS);
+  } catch (err) {
+    msg.textContent = "Fikk ikke kontakt. Prøv igjen om litt."; msg.style.color = "var(--warn)";
+  } finally { $("stGo").disabled = false; }
+}
+$("statusForm").addEventListener("submit", (e) => { e.preventDefault(); $("statusResult").hidden = true; hentStatus(); });
+
+function tegnStatus(r) {
+  const kreditt = /innbytte/i.test(r.mode);
+  const steg = [];
+  if (r.needsApproval) steg.push({ id: "venter", t: "Forespørsel innsendt – avvent bekreftelse", d: "Vi går gjennom tilbudet før du sender kortene. Du får e-post når du kan sende." });
+  steg.push({ id: "send", t: r.needsApproval ? "Godkjent – send pakken" : "Forespørsel innsendt – send pakken", d: "Send kortene til oss med Posten, med en lapp med referansen." });
+  steg.push({ id: "transport", t: "Under transport", d: r.tracking ? "Sporingsnummer: " + r.tracking : "Pakken er på vei til oss." });
+  steg.push({ id: "mottatt", t: "Pakken har ankommet PokéNordic", d: "Vi kontrollerer kortene. Det tar 1–3 virkedager." });
+  steg.push({ id: "tilbud", t: "Endelig tilbud sendt", d: "Sjekk e-posten din for å godta eller avslå tilbudet." });
+  if (r.status === "Avslått") steg.push({ id: "avslatt", t: "Tilbudet er avslått", d: "Vi sender kortene tilbake til deg. Returfrakten betaler du." });
+  else {
+    steg.push({ id: "godtatt", t: "Tilbud godtatt", d: kreditt ? "Vi gjør klar butikkreditten." : "Vi starter utbetalingen." });
+    steg.push({ id: "betalt", t: kreditt ? "Butikkreditten er sendt" : "Utbetaling er gjennomført", d: kreditt ? "Koden er sendt til deg på e-post." : "Pengene er sendt til deg." });
+  }
+  const nåId = { "Venter på godkjenning": "venter", "Ny": "send", "Godkjent": "send", "Under transport": "transport", "Mottatt": "mottatt",
+    "Endelig tilbud sendt": "tilbud", "Godtatt": "godtatt", "Betalt": "betalt", "Avslått": "avslatt" }[r.status];
+  const nå = steg.findIndex((s) => s.id === nåId);
+  const alleFerdig = r.status === "Betalt" || r.status === "Avslått";
+  const linjer = steg.map((s, i) => {
+    const klasse = i < nå || (alleFerdig && i === nå) ? "ferdig" : i === nå ? "nå" : "senere";
+    let ekstra = "";
+    if (klasse === "nå" && s.id === "send") {
+      const a = r.shipTo || {};
+      ekstra = '<div class="st-send"><address><b>Send til:</b><br>' + esc(a.name || "") + "<br>" + esc(a.address || "").replace(", ", "<br>") + (a.phone ? "<br>" + esc(a.phone) : "") + "</address>" +
+        '<form id="stSendt"><input id="stSporing" type="text" maxlength="60" placeholder="Sporingsnummer (valgfritt)" aria-label="Sporingsnummer (valgfritt)">' +
+        '<button class="btn" type="submit">Jeg har sendt pakken</button></form></div>';
+    }
+    return '<li class="' + klasse + '"><span class="prikk" aria-hidden="true">' +
+      (klasse === "ferdig" ? '<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3.2" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12.5l4.5 4.5L19 7.5"/></svg>' : "") +
+      '</span><div><b>' + esc(s.t) + (klasse === "nå" ? '<span class="sr"> (nå)</span>' : "") + '</b><div class="tekst">' + esc(s.d) + "</div>" + ekstra + "</div></li>";
+  }).join("");
+  const ukjent = nå < 0 ? '<p class="st-banner">Status: <b>' + esc(r.status || "ukjent") + "</b>. Ta kontakt på kundeservice@pokenordic.no hvis du lurer på noe.</p>" : "";
+  const rader = (r.lines || []).map((l) => {
+    const usikker = !r.final && /usikker/i.test(l.cond);
+    const tilstand = l.bulk ? "Bulk" : l.changed ? esc(l.givenCond) + " → <b>" + esc(l.cond) + "</b>" : esc(l.cond);
+    return '<tr class="' + (l.rejected ? "avvist" : "") + '"><td class="mono">' + esc(l.nr) + "</td>" +
+      '<td><span class="kortnavn">' + esc(l.name) + "</span><small>" + esc([l.set, l.number, l.bulk ? "" : l.variant].filter(Boolean).join(" · ")) + "</small>" +
+      (l.rejected ? '<span class="st-merk">Kjøpes ikke, sendes tilbake</span>' : "") + "</td>" +
+      "<td>" + tilstand + "</td><td class=\"num\">" + esc(l.bulk ? String(l.qty).replace(".", ",") + " kg" : l.qty) + "</td>" +
+      '<td class="num">' + (usikker ? "vurderes" : fmtKr(l.each)) + '</td><td class="num">' + (l.rejected ? "–" : usikker ? "vurderes" : fmtKr(l.sum)) + "</td></tr>";
+  }).join("");
+  const antall = (r.lines || []).reduce((s, l) => s + (l.bulk ? 0 : l.qty), 0);
+  $("statusResult").innerHTML = '<div class="st-kort">' +
+    '<div class="st-hode"><h2>Innsending #' + esc(r.ref) + "</h2><span>" + esc([r.received ? "Sendt inn " + r.received : "", r.mode].filter(Boolean).join(" · ")) + "</span></div>" +
+    ukjent + '<ol class="tidslinje">' + linjer + "</ol>" +
+    '<div class="st-sum"><div><span>Estimert ' + (kreditt ? "innbytteverdi" : "utbetaling") + "</span><b>" + fmtKr(r.estimate) + "</b></div>" +
+    (r.final && r.finalTotal ? "<div><span>Endelig tilbud</span><b>" + fmtKr(r.finalTotal) + "</b></div>" : "") + "</div>" +
+    '<h3 style="margin:24px 0 0">Kortene i innsendingen <span class="fineprint">(' + antall + " kort)</span></h3>" +
+    (r.final ? "" : '<p class="fineprint">Prisene er estimatet fra innsendingen. Når vi har kontrollert kortene, ser du endelig tilstand og pris her.</p>') +
+    '<div class="st-tabell"><table><thead><tr><th>Varenr.</th><th>Kort</th><th>Tilstand</th><th class="num">Antall</th><th class="num">Pris/stk</th><th class="num">Sum</th></tr></thead><tbody>' +
+    rader + "</tbody></table></div></div>";
+  $("statusResult").hidden = false;
+  const f = $("stSendt");
+  if (f) f.addEventListener("submit", async (e) => {
+    e.preventDefault();
+    const btn = f.querySelector("button");
+    btn.disabled = true; btn.textContent = "Lagrer …";
+    try {
+      const svar = await postTilSkriptet({ handling: "sendt", ref: r.ref, e: r.e, tracking: $("stSporing").value.trim() });
+      if (!svar.ok) { alert(svar.error || "Det gikk ikke. Prøv igjen."); btn.disabled = false; btn.textContent = "Jeg har sendt pakken"; return; }
+      hentStatus();
+    } catch (err) { alert("Fikk ikke kontakt. Prøv igjen om litt."); btn.disabled = false; btn.textContent = "Jeg har sendt pakken"; }
+  });
+}
+
 function alertBox(msg) {
   const t = $("toast"); t.textContent = msg;
   $("receiptMsg").textContent = msg;
