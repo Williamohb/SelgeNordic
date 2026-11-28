@@ -2093,10 +2093,13 @@ const spraakFra = (s) => {
 // Nøkler for å sammenligne sett, nummer og navn på tvers av skrivemåter
 const nrNokkel = (n) => normNum(String(n).toLowerCase().replace(/\s+/g, "")).split("/")[0];
 const nrTotal = (n) => { const d = normNum(String(n).toLowerCase().replace(/\s+/g, "")).split("/"); return d.length > 1 ? d[1] : ""; };
+// Settkoden foran kolon eller strek tas bort («ME01: Mega Evolution», «SV: Scarlet & Violet 151», «SM - Ultra Prism»),
+// og ord i flertall gjøres om til entall («Promos» = «Promo»), så skrivemåtene i Collectr og TCGplayer møtes.
 function settNokkel(navn) {
-  const t = norm(String(navn)).replace(/\b(pokemon|tcg|the|set|expansion|trading card game)\b/g, " ").replace(/\s+/g, " ").trim();
-  const uten = t.replace(/^(sv|swsh|sm|xy|bw|me|mee|dp|hgss|svp)\d*[a-z]*\s+/, "").trim();
-  return uten || t;
+  const rå = String(navn).trim(), uten = rå.replace(/^[A-Za-z]{1,6}\d*[A-Za-z.]*\d*\s*[:\-–]\s+/, "");
+  const lag = (s) => norm(s).replace(/\b(pokemon|tcg|the|set|expansion|trading card game|cards?)\b/g, " ")
+    .split(/\s+/).filter(Boolean).map((w) => (w.length > 3 ? w.replace(/s$/, "") : w)).join(" ");
+  return lag(uten) || lag(rå);
 }
 function settLikhet(a, b) {
   if (!a || !b) return 0;
@@ -2112,6 +2115,8 @@ function navnLikhet(kort, rad) {
   if (!b) return 1;
   if (a === b) return 3;
   const a2 = utenParentes(a), b2 = utenParentes(b);
+  // Har fila et tillegg i parentes («Bulbasaur (Mega Evolution Stamped)»), er det en egen utgave: da må navnet være helt likt
+  if (/[(\[]/.test(rad)) return 0;
   if (a2 === b2) return 2.5;
   if (a2.includes(b2) || b2.includes(a2)) return 2;
   return a2.split(" ")[0] === b2.split(" ")[0] ? 1 : 0;
@@ -2153,6 +2158,13 @@ function finnKort(r) {
     }
     if (beste.length === 1) return { c: beste[0] };
     if (beste.length > 1) return { flere: true };
+    // Samme kort kan ligge i ulike sett hos Collectr og TCGplayer (f.eks. stemplede kort under «Promos» hos den ene og
+    // «Miscellaneous Cards & Products» hos den andre). Da godtas et treff i et annet sett, men bare når hele navnet,
+    // med tillegg i parentes, og nummeret er helt likt, og det bare finnes ett slikt kort.
+    if (sk && nr && r.navn) {
+      const like = kand.filter((c) => navnLikhet(c.name, r.navn) === 3 && (!nrTotal(nr) || !nrTotal(c.number) || nrTotal(nr) === nrTotal(c.number)));
+      if (like.length === 1) return { c: like[0], annetSett: true };
+    }
   }
   return null;
 }
@@ -2212,7 +2224,7 @@ async function importerFil(fil) {
     const nøkkel = c.id + "|" + vv.v + "|" + cond;
     const ex = samlet.get(nøkkel);
     if (ex) ex.n = Math.min(999, ex.n + r.antall);
-    else samlet.set(nøkkel, { c, v: vv.v, cond, n: Math.min(999, r.antall), flagg: [vv.gjettet ? "sjekk varianten" : "", TILSTAND_TEKST(r.tilstand) ? "" : "tilstand mangler i fila"].filter(Boolean) });
+    else samlet.set(nøkkel, { c, v: vv.v, cond, n: Math.min(999, r.antall), flagg: [t.annetSett ? "funnet i et annet sett enn i fila, sjekk at det er riktig kort" : "", vv.gjettet ? "sjekk varianten" : "", TILSTAND_TEKST(r.tilstand) ? "" : "tilstand mangler i fila"].filter(Boolean) });
   }
   impLinjer = [...samlet.values()].sort((a, b) => usdFor(b.c, b.v) - usdFor(a.c, a.v));
   impVis = 100;
