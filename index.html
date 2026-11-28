@@ -863,7 +863,7 @@ ol.steps span { font-size: 14px; color: var(--muted); }
         <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true"><circle cx="11" cy="11" r="7"></circle><path d="m20 20-3.5-3.5"></path></svg>
         <input id="q" type="search" placeholder="Kortnavn, nummer eller sett …" autocomplete="off" spellcheck="false" aria-label="Søk etter kort" disabled>
       </div>
-      <p class="hint">Eksempler: <code>charizard</code> · <code>pikachu 25/102</code> · <code>umbreon evolving</code> · <code>mew ex 151</code></p>
+      <p class="hint">Eksempler: <code>charizard</code> · <code>pikachu 58/102</code> · <code>umbreon evolving</code> · <code>mew ex 151</code></p>
       <p class="hint" id="langNote" hidden>Japanske kort søker du opp med det engelske navnet, settnavnet eller settkoden, f.eks. <code>pikachu</code>, <code>terastal fest</code> eller <code>sv2a</code>.</p>
 
       <div class="listhead"><h2 id="listTitle">Laster kortdatabase</h2><span id="listCount"></span></div>
@@ -1418,6 +1418,17 @@ async function load() {
 }
 
 /* ---------- Søk ---------- */
+// Søkeord. Tall matches uten hensyn til nuller foran, så «005», «05» og «5» alle finner 05/73, og «5/73»,
+// «005/073» og «05/73» finner det samme kortet. Et tall alene kan treffe både nummeret og antallet i settet («102»).
+function sokTokens(nq) {
+  return nq.split(/\s+/).filter(Boolean).map((t) => {
+    if (!/^\d+(\/\d+)?$/.test(t)) return { raw: t };
+    const kjerne = t.split("/").map((p) => "0*" + p.replace(/^0+(?=\d)/, "")).join("\\/");
+    return { raw: t, re: new RegExp("[ /]" + kjerne + "(?=[ /])") };
+  });
+}
+const tokTreff = (c, t) => (t.re ? t.re.test(c.key) : c.key.includes(t.raw));
+
 function search(q) {
   const nq = norm(q).trim();
   let list, title;
@@ -1432,11 +1443,11 @@ function search(q) {
       .sort((a, b) => bestUsd(b) - bestUsd(a)).slice(0, 12);
     title = lang === "jp" ? "Populære japanske kort fra de nyeste settene" : "Populære kort fra de nyeste settene";
   } else {
-    const toks = nq.split(/\s+/).filter(Boolean);
+    const sokeord = sokTokens(nq), toks = sokeord.map((t) => t.raw);
     const scored = [];
     for (const c of CARDS) {
       let ok = true;
-      for (const t of toks) { if (!c.key.includes(t)) { ok = false; break; } }
+      for (const t of sokeord) { if (!tokTreff(c, t)) { ok = false; break; } }
       if (!ok) continue;
       let s = 0;
       if (c.nkey.trim() === toks.join(" ")) s += 4;
@@ -1766,7 +1777,7 @@ function renderSett() {
     skjult += alle.length - synlige.length;
     const kort = synlige
       .sort((a, b) => nrSort(a.number) - nrSort(b.number) || String(a.number).localeCompare(String(b.number)))
-      .filter((c) => (!q || q.split(/\s+/).every((t) => c.key.includes(t))) &&
+      .filter((c) => (!q || sokTokens(q).every((t) => tokTreff(c, t))) &&
         (!bare || c.variants.some(([v]) => settValg.get(c.id + "|" + v) > 0)));
     if (!kort.length) continue;
     if (g.sett.length > 1) { const h = document.createElement("div"); h.className = "setsub"; h.textContent = SETS[si].name; box.appendChild(h); }
