@@ -648,6 +648,10 @@ a.ext { color: var(--accent); font-size: 14px; text-underline-offset: 3px; }
 .items { list-style: none; margin: 0; padding: 4px 24px; max-height: 46vh; overflow-y: auto; }
 @media (max-width: 900px) { .items { max-height: none; } }
 .item { display: grid; grid-template-columns: auto minmax(0, 1fr) auto; gap: 2px 12px; padding: 12px 0; border-bottom: 1px solid var(--line); }
+/* Nettopp lagt til: kort blink, så selgeren ser hvilken linje som er ny */
+.item.ny { animation: nyLinje 1.6s var(--ease); }
+@keyframes nyLinje { from { background-color: var(--accent-soft); box-shadow: -24px 0 0 var(--accent-soft), 24px 0 0 var(--accent-soft); } }
+@media (prefers-reduced-motion: reduce) { .item.ny { animation: none; } }
 .item:last-child { border-bottom: 0; }
 .item .n { grid-column: 2; font-weight: 600; font-size: 15px; min-width: 0; overflow-wrap: anywhere; }
 .item .s { grid-column: 2; font-size: 13px; color: var(--muted); min-width: 0; overflow-wrap: anywhere; }
@@ -1698,9 +1702,18 @@ function addToOffer(c, variant, cond, qty) {
   if (!$("donePanel").hidden) $("newOffer").click(); // nytt kort etter innsending starter et nytt tilbud
   const ex = offer.find((o) => o.id === c.id && o.variant === variant && o.cond === cond);
   if (ex) ex.qty = Math.min(999, ex.qty + qty);
-  else offer.push({ id: c.id, variant, cond, qty, lang: c.lang });
+  leggØverst(ex || { id: c.id, variant, cond, qty, lang: c.lang });
   persist();
   renderOffer();
+}
+// Nye linjer legges øverst i lista, så selgeren ser dem med en gang og kan rette en feil uten å bla ned forbi
+// hundre kort. Finnes linjen fra før (samme kort, variant og tilstand), flyttes den opp. Den får et kort blink.
+let sistLagtTil = new Set();
+function leggØverst(o) {
+  const i = offer.indexOf(o);
+  if (i >= 0) offer.splice(i, 1);
+  offer.unshift(o);
+  sistLagtTil.add(o);
 }
 /* ---------- Settoversikt ---------- */
 // Selgeren velger et sett og fyller inn antall per kort og variant. Alt legges i tilbudet på én gang,
@@ -1990,7 +2003,7 @@ $("setAdd").onclick = () => {
   const linjer = settLinjer();
   if (!linjer.length) return;
   let n = 0;
-  for (const x of linjer) { addToOffer(x.c, x.v, x.cond, x.n); n += x.n; settValg.delete(x.c.id + "|" + x.v); settTilstand.delete(x.c.id); }
+  for (const x of linjer.slice().reverse()) { addToOffer(x.c, x.v, x.cond, x.n); n += x.n; settValg.delete(x.c.id + "|" + x.v); settTilstand.delete(x.c.id); }
   lagreSettValg();
   renderSett();
   $("setSum").textContent = "La til " + n + " kort i tilbudet ✓";
@@ -2339,10 +2352,10 @@ $("impAdd").onclick = () => {
   if (!klare.length) return;
   if (!$("donePanel").hidden) $("newOffer").click(); // som addToOffer, men lagres og tegnes bare én gang
   let n = 0;
-  for (const x of klare) {
+  for (const x of klare.slice().reverse()) {  // baklengs, så importen havner øverst i samme rekkefølge som i listen
     const ex = offer.find((o) => o.id === x.c.id && o.variant === x.v && o.cond === x.cond);
     if (ex) ex.qty = Math.min(999, ex.qty + x.n);
-    else offer.push({ id: x.c.id, variant: x.v, cond: x.cond, qty: x.n, lang: x.c.lang });
+    leggØverst(ex || { id: x.c.id, variant: x.v, cond: x.cond, qty: x.n, lang: x.c.lang });
     n += x.n;
   }
   persist();
@@ -2356,7 +2369,7 @@ function addBulk(id, kg) {
   if (!$("donePanel").hidden) $("newOffer").click();
   const ex = offer.find((o) => o.bulk === id);
   if (ex) ex.kg = roundKg(ex.kg + kg);
-  else offer.push({ bulk: id, kg: roundKg(kg) });
+  leggØverst(ex || { bulk: id, kg: roundKg(kg) });
   persist();
   renderOffer();
 }
@@ -2511,8 +2524,10 @@ function renderOffer() {
     plus.onclick = () => setQty(L.qty + step);
     inp.onchange = () => setQty(parseFloat(String(inp.value).replace(",", ".")) || 0);
     li.querySelector(".linkbtn").onclick = () => setQty(0);
+    if (sistLagtTil.has(o)) li.classList.add("ny");
     ul.appendChild(li);
   });
+  if (sistLagtTil.size) { ul.scrollTop = 0; sistLagtTil = new Set(); }  // det som nettopp ble lagt til, står øverst
   const ct = countTxt(count, Math.round(kg * 10) / 10);
   $("slipCount").textContent = ct;
   $("mbCount").textContent = ct;
